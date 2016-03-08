@@ -51,6 +51,29 @@ namespace EV3Dev.CSharp
 		    }
 	    }
 
+		protected string[] GetStringArrayAttribute( string attributeName )
+		{
+			return GetStringAttribute( attributeName ).Split( );
+		}
+
+		protected string[] GetStringSelectorAttribute( string attributeName, out string selected )
+		{
+			var variants = GetStringArrayAttribute( attributeName );
+			selected = null;
+
+			for ( int i = 0; i < variants.Length; ++i )
+			{
+				if ( variants[i].StartsWith( "[" ) && variants[i].EndsWith( "]" ) )
+				{
+					selected = variants[i].Substring( 1, variants[i].Length - 2 );
+					variants[i] = selected;
+					break;
+				}
+			}
+			
+			return variants;
+		}
+
 	    protected void SetStringAttribute( string attributeName, string value )
 	    {
 		    StreamWriter writer;
