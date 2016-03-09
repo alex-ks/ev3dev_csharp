@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace EV3Dev.CSharp
+namespace Ev3Dev.CSharp
 {
 	public abstract class Device : IDisposable
     {
@@ -148,5 +148,7 @@ namespace EV3Dev.CSharp
 			    stream.Value.Dispose( );
 		    }
 	    }
+
+		public const string SysRoot = @"/sys/class";
     }
 }
