@@ -268,6 +268,9 @@ namespace EV3Dev.CSharp
 			set { SetIntAttribute( TimeSpAttribute, value ); }
 		}
 
+		public const string LargeMotorDriver = "lego-ev3-l-motor";
+		public const string MediumMotorDriver = "lego-ev3-m-motor";
+
 		/// <summary>
 		/// Run the motor until another command is sent.
 		/// </summary>

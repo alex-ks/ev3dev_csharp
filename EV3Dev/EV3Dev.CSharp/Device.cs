@@ -100,7 +100,18 @@ namespace Ev3Dev.CSharp
 		    return int.Parse( GetStringAttribute( attributeName ) );
 	    }
 
-	    protected bool Connect( string classDirectory, string pattern, IDictionary<string, string[]> matchCriteria )
+		protected int GetRawData( string attributeName, byte[] buffer, int offset, int count )
+		{
+			if ( !Connected )
+			{ throw new InvalidOperationException( "Device is not connected" ); }
+
+			using ( var stream = new FileStream( Path.Combine( _path, attributeName ), FileMode.Open, FileAccess.Read ) )
+			{
+				return stream.Read( buffer, offset, count );
+			}
+		}
+
+		protected bool Connect( string classDirectory, string pattern, IDictionary<string, string[]> matchCriteria )
 	    {
 			if ( !Directory.Exists( classDirectory ) )
 			{ return false; }
@@ -121,7 +132,7 @@ namespace Ev3Dev.CSharp
 						    using ( var reader = new StreamReader( attributeStream ) )
 						    {
 							    var value = reader.ReadLine( );
-							    if ( !matchCriterion.Value.Any( x => value.Equals( x ) ) )
+							    if ( !matchCriterion.Value.Any( x => value != null && value.Equals( x ) ) )
 							    {
 								    match = false;
 								    break;
