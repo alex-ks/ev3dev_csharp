@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Ev3Dev.CSharp;
 
 namespace EV3Dev.CSharp
@@ -7,19 +8,25 @@ namespace EV3Dev.CSharp
 	{
 		public Motor( string address )
 		{
-			Connect( new Dictionary<string, string[]>
+			var success = Connect( new Dictionary<string, string[]>
 			{
 				{ AddressAttribute, new[] { address } }
 			} );
+
+			if ( !success )
+			{ throw new ArgumentException( $"Motor at {address} is not found" ); }
 		}
 
 		public Motor( string address, string motorType )
 		{
-			Connect( new Dictionary<string, string[]>
+			var success = Connect( new Dictionary<string, string[]>
 			{
 				{ AddressAttribute, new[] { address } },
 				{ DriverNameAttribute, new[] { motorType } }
 			} );
+
+			if ( !success )
+			{ throw new ArgumentException( $"Motor {motorType} at {address} is not found" ); }
 		}
 
 		protected bool Connect( IDictionary<string, string[]> matchCriteria )
@@ -262,6 +269,10 @@ namespace EV3Dev.CSharp
 		/// </summary>
 		public string[] StopCommands => GetStringArrayAttribute( StopCommandsAttribute );
 
+		/// <summary>
+		/// Writing specifies the amount of time the motor will run when using the run-timed command. 
+		/// Reading returns the current value. Units are in milliseconds.
+		/// </summary>
 		public int TimeSp
 		{
 			get { return GetIntAttribute( TimeSpAttribute ); }
@@ -395,7 +406,7 @@ namespace EV3Dev.CSharp
 		public const string StopCommandAttribute = "stop_command";
 		public const string TimeSpAttribute = "time_sp";
 
-		public const string TachoMotorClass = "tacho_motor";
-		public const string MotorPattern = "motor";
+		public const string TachoMotorClass = @"tacho-motor";
+		public const string MotorPattern = @"motor";
 	}
 }

@@ -42,7 +42,7 @@ namespace Ev3Dev.CSharp
 		    if ( !Connected )
 		    { throw new InvalidOperationException( "Device is not connected" ); }
 
-		    using ( var stream = new FileStream( Path.Combine( _path, attributeName ), FileMode.Open, FileAccess.Read ) )
+		    using ( var stream = new FileStream( Path.Combine( _path, attributeName ), FileMode.Open, FileAccess.Read, FileShare.ReadWrite ) )
 		    {
 			    using ( var reader = new StreamReader( stream ) )
 			    {
@@ -79,7 +79,8 @@ namespace Ev3Dev.CSharp
 		    StreamWriter writer;
 		    if ( !_writableAttributes.ContainsKey( attributeName ) )
 		    {
-				writer = new StreamWriter( Path.Combine( _path, attributeName ) );
+				var stream = new FileStream( Path.Combine( _path, attributeName ), FileMode.Open, FileAccess.Write, FileShare.Read );
+				writer = new StreamWriter( stream );
 				_writableAttributes.Add( attributeName, writer );
 		    }
 		    else
@@ -120,7 +121,7 @@ namespace Ev3Dev.CSharp
 
 		    foreach ( var directory in directories )
 		    {
-			    var directoryName = Path.GetDirectoryName( directory );
+			    var directoryName = Path.GetFileName( directory );
 			    if ( directoryName != null && directoryName.StartsWith( pattern ) )
 			    {
 				    bool match = true;

@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Ev3Dev.CSharp
 {
@@ -21,6 +19,35 @@ namespace Ev3Dev.CSharp
 				{ S32Format, sizeof( int ) },
 				{ FloatFormat, sizeof( float ) }
 			};
+		}
+
+		public Sensor( string address )
+		{
+			var success = Connect( new Dictionary<string, string[]>
+			{
+				{ AddressAttribute, new[] { address } }
+			} );
+
+			if ( !success )
+			{ throw new ArgumentException( "Sensor is not found" ); }
+		}
+
+		public Sensor( string address, string[] sensorTypes )
+		{
+			var success = Connect( new Dictionary<string, string[]>
+			{
+				{ AddressAttribute, new[] { address } },
+				{ DriverNameAttribute, sensorTypes }
+			} );
+
+			if ( !success )
+			{ throw new ArgumentException( "Sensor is not found" ); }
+		}
+
+		protected bool Connect( IDictionary<string, string[]> matchCriteria )
+		{
+			string path = $@"{SysRoot}/{SensorClass}/";
+			return Connect( path, SensorPattern, matchCriteria );
 		}
 
 		private volatile byte[] _binaryData;
@@ -149,5 +176,8 @@ namespace Ev3Dev.CSharp
 		public const string S16BigEndianFormat = "s16_be";
 		public const string S32Format = "s32";
 		public const string FloatFormat = "float";
+
+		private const string SensorClass = "lego-sensor";
+		private const string SensorPattern = "sensor";
 	}
 }
