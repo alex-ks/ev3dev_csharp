@@ -42,6 +42,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="InfraredSensor.cs" />
     <Compile Include="LargeMotor.cs" />
     <Compile Include="LazyTask.cs" />
     <Compile Include="LegoMotor.cs" />

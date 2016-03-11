@@ -30,20 +30,7 @@ namespace Ev3Dev.CSharp.BasicDevices
 
 	public class LegoMotor : Motor
 	{
-		private static readonly IDictionary<OutputPort, string> PortNames;
-
-		static LegoMotor( )
-		{
-			PortNames = new Dictionary<OutputPort, string>
-			{
-				{ OutputPort.OutA, "outA" },
-				{ OutputPort.OutB, "outB" },
-				{ OutputPort.OutC, "outC" },
-				{ OutputPort.OutD, "outD" }
-			};
-		}
-
-		protected LegoMotor( OutputPort port, string motorType ) : base( PortNames[port], motorType )
+		protected LegoMotor( OutputPort port, string motorType ) : base( port.ToStringName( ), motorType )
 		{
 
 		}
