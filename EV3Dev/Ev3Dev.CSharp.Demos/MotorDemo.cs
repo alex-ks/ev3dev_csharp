@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using Ev3Dev.CSharp.BasicDevices;
 
@@ -15,15 +12,13 @@ namespace Ev3Dev.CSharp.Demos
 			using ( var motor = new LargeMotor( OutputPort.OutB ) )
 			{
 				Console.Out.WriteLine( "One rotation..." );
-				motor.Run( 1.0f, 75 );
-				motor.WaitForStop( );
+				motor.Run( rotations: 1.0f, speed: 75 ).Wait( );
 
 				Console.Out.WriteLine( "One second run..." );
-				motor.RunTimed( 1000, 75 );
-				motor.WaitForStop( );
+				motor.RunTimed( ms: 1000, speed: 75 ).Wait( );
 
 				Console.Out.WriteLine( "1.5 seconds back..." );
-				motor.RunForever( -75 );
+				motor.RunForever( speed: -75 );
 				Thread.Sleep( 1500 );
 				motor.Stop( );
 			}

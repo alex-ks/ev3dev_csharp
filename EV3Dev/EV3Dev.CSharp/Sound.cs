@@ -27,12 +27,12 @@ namespace Ev3Dev.CSharp
 	}
 
 	/// <summary>
-	/// Provides static methods for simple sound operations and constants for basic tones.
+	/// Provides static methods for simple sound operations.
 	/// </summary>
 	public static class Sound
 	{
 		/// <summary>
-		/// Play single tone.
+		/// Play single tone. Frequences of basic tones are defined as constants in <see cref="Tones"/> class.
 		/// </summary>
 		/// <param name="frequency">Frequency of tone in Hz. Default EV3 value is 440Hz.</param>
 		/// <param name="ms">Duration of tone in milliseconds.</param>
@@ -48,6 +48,7 @@ namespace Ev3Dev.CSharp
 
 		/// <summary>
 		/// Play sequence of tones.
+		/// Frequences of basic tones are defined as constants in <see cref="Tones"/> class.
 		/// </summary>
 		/// <param name="sequence">Collection of tone descriptions. Tones will be played in the enumeration order.</param>
 		/// <param name="synchronously">Indicates whether process should wait for playback end.</param>
@@ -61,7 +62,7 @@ namespace Ev3Dev.CSharp
 				if ( first )
 				{ first = false; }
 				else
-				{ builder.Append( "-n " ); }
+				{ builder.Append( " -n " ); }
 
 				builder.Append( beep );
 			}
@@ -106,7 +107,13 @@ namespace Ev3Dev.CSharp
 		private const string APlayPath = "/usr/bin/aplay";
 		private const string ESpeakPath = "/usr/bin/espeak";
 		private const string BashPath = "/bin/bash";
+	}
 
+	/// <summary>
+	/// Provides constants for basic tones frequences.
+	/// </summary>
+	public static class Tones
+	{
 		public const float C = 261.6f;
 		public const float Cis = 277.2f;
 		public const float D = 293.7f;

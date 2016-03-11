@@ -282,6 +282,42 @@ namespace EV3Dev.CSharp
 		public const string LargeMotorDriver = "lego-ev3-l-motor";
 		public const string MediumMotorDriver = "lego-ev3-m-motor";
 
+		public const string CommandAttribute = "command";
+		public const string CommandsAttribute = "commands";
+		public const string StopCommandsAttribute = "stop_commands";
+		public const string CountPerRotAttribute = "count_per_rot";
+		public const string DriverNameAttribute = "driver_name";
+		public const string DutyCycleAttribute = "duty_cycle";
+		public const string DutyCycleSpAttribute = "duty_cycle_sp";
+		public const string EncoderPolarityAttribute = "encoder_polarity";
+		public const string PolarityAttribute = "polarity";
+		public const string AddressAttribute = "address";
+		public const string PositionAttribute = "position";
+		public const string PositionPAttribute = "hold_pid/Kp";
+		public const string PositionIAttribute = "hold_pid/Ki";
+		public const string PositionDAttribute = "hold_pid/Kd";
+		public const string PositionSpAttribute = "position_sp";
+		public const string SpeedAttribute = "speed";
+		public const string SpeedSpAttribute = "speed_sp";
+		public const string RampUpSpAttribute = "ramp_up_sp";
+		public const string RampDownSpAttribute = "ramp_down_sp";
+		public const string SpeedRegulationAttribute = "speed_regulation";
+		public const string SpeedRegulationPAttribute = "speed_pid/Kp";
+		public const string SpeedRegulationIAttribute = "speed_pid/Ki";
+		public const string SpeedRegulationDAttribute = "speed_pid/Kd";
+		public const string StateAttribute = "state";
+		public const string StopCommandAttribute = "stop_command";
+		public const string TimeSpAttribute = "time_sp";
+		
+		private const string TachoMotorClass = @"tacho-motor";
+		private const string MotorPattern = @"motor";
+	}
+
+	/// <summary>
+	/// Provides string constants for motor commands.
+	/// </summary>
+	public static class MotorCommands
+	{
 		/// <summary>
 		/// Run the motor until another command is sent.
 		/// </summary>
@@ -327,6 +363,26 @@ namespace EV3Dev.CSharp
 		public const string CommandReset = "reset";
 
 		/// <summary>
+		/// Power will be removed from the motor and it will freely coast to a stop.
+		/// </summary>
+		public const string StopCommandCoast = "coast";
+
+		/// <summary>
+		/// Power will be removed from the motor and a passive electrical load will
+		/// be placed on the motor. This is usually done by shorting the motor terminals
+		/// together. This load will absorb the energy from the rotation of the motors and
+		/// cause the motor to stop more quickly than coasting.
+		/// </summary>
+		public const string StopCommandBrake = "brake";
+
+		/// <summary>
+		/// Does not remove power from the motor. Instead it actively try to hold the motor
+		/// at the current position. If an external force tries to turn the motor, the motor
+		/// will ``push back`` to maintain its position.
+		/// </summary>
+		public const string StopCommandHold = "hold";
+
+		/// <summary>
 		/// Sets the normal polarity of the rotary encoder.
 		/// </summary>
 		public const string EncoderPolarityNormal = "normal";
@@ -358,55 +414,5 @@ namespace EV3Dev.CSharp
 		/// The motor controller will use the power specified in `duty_cycle_sp`.
 		/// </summary>
 		public const string SpeedRegulationOff = "off";
-
-		/// <summary>
-		/// Power will be removed from the motor and it will freely coast to a stop.
-		/// </summary>
-		public const string StopCommandCoast = "coast";
-
-		/// <summary>
-		/// Power will be removed from the motor and a passive electrical load will
-		/// be placed on the motor. This is usually done by shorting the motor terminals
-		/// together. This load will absorb the energy from the rotation of the motors and
-		/// cause the motor to stop more quickly than coasting.
-		/// </summary>
-		public const string StopCommandBrake = "brake";
-
-		/// <summary>
-		/// Does not remove power from the motor. Instead it actively try to hold the motor
-		/// at the current position. If an external force tries to turn the motor, the motor
-		/// will ``push back`` to maintain its position.
-		/// </summary>
-		public const string StopCommandHold = "hold";
-
-		public const string CommandAttribute = "command";
-		public const string CommandsAttribute = "commands";
-		public const string StopCommandsAttribute = "stop_commands";
-		public const string CountPerRotAttribute = "count_per_rot";
-		public const string DriverNameAttribute = "driver_name";
-		public const string DutyCycleAttribute = "duty_cycle";
-		public const string DutyCycleSpAttribute = "duty_cycle_sp";
-		public const string EncoderPolarityAttribute = "encoder_polarity";
-		public const string PolarityAttribute = "polarity";
-		public const string AddressAttribute = "address";
-		public const string PositionAttribute = "position";
-		public const string PositionPAttribute = "hold_pid/Kp";
-		public const string PositionIAttribute = "hold_pid/Ki";
-		public const string PositionDAttribute = "hold_pid/Kd";
-		public const string PositionSpAttribute = "position_sp";
-		public const string SpeedAttribute = "speed";
-		public const string SpeedSpAttribute = "speed_sp";
-		public const string RampUpSpAttribute = "ramp_up_sp";
-		public const string RampDownSpAttribute = "ramp_down_sp";
-		public const string SpeedRegulationAttribute = "speed_regulation";
-		public const string SpeedRegulationPAttribute = "speed_pid/Kp";
-		public const string SpeedRegulationIAttribute = "speed_pid/Ki";
-		public const string SpeedRegulationDAttribute = "speed_pid/Kd";
-		public const string StateAttribute = "state";
-		public const string StopCommandAttribute = "stop_command";
-		public const string TimeSpAttribute = "time_sp";
-
-		public const string TachoMotorClass = @"tacho-motor";
-		public const string MotorPattern = @"motor";
 	}
 }

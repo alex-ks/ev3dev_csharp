@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading;
 using EV3Dev.CSharp;
 
@@ -51,16 +48,21 @@ namespace Ev3Dev.CSharp.BasicDevices
 
 		}
 
+		/// <summary>
+		/// Period of motor polling when waiting for motor stop in milliseconds.
+		/// </summary>
+		public int PollPeriod { get; set; } = 50;
+
 		public new Polarity Polarity
 		{
-			get { return base.Polarity == PolarityNormal ? Polarity.Normal : Polarity.Inversed; }
-			set { base.Polarity = value == Polarity.Normal ? PolarityNormal : PolarityInversed; }
+			get { return base.Polarity == MotorCommands.PolarityNormal ? Polarity.Normal : Polarity.Inversed; }
+			set { base.Polarity = value == Polarity.Normal ? MotorCommands.PolarityNormal : MotorCommands.PolarityInversed; }
 		}
 
 		public new bool SpeedRegulationEnabled
 		{
-			get { return base.SpeedRegulationEnabled == SpeedRegulationOn; }
-			set { base.SpeedRegulationEnabled = value ? SpeedRegulationOn : SpeedRegulationOff; }
+			get { return base.SpeedRegulationEnabled == MotorCommands.SpeedRegulationOn; }
+			set { base.SpeedRegulationEnabled = value ? MotorCommands.SpeedRegulationOn : MotorCommands.SpeedRegulationOff; }
 		}
 
 		public new StopCommand StopCommand
@@ -71,34 +73,36 @@ namespace Ev3Dev.CSharp.BasicDevices
 
 		public void RunForever( )
 		{
-			Command = CommandRunForever;
+			Command = MotorCommands.CommandRunForever;
 		}
 
 		public void RunForever( int speed )
 		{
 			var old = DutyCycleSp;
 			DutyCycleSp = speed;
-			Command = CommandRunForever;
+			Command = MotorCommands.CommandRunForever;
 			DutyCycleSp = old;
 		}
 
-		public void RunTimed( int ms )
+		public LazyTask RunTimed( int ms )
 		{
 			TimeSp = ms;
-			Command = CommandRunTimed;
+			Command = MotorCommands.CommandRunTimed;
+			return new LazyTask( WaitForStop );
 		}
 
-		public void RunTimed( int ms, int speed )
+		public LazyTask RunTimed( int ms, int speed )
 		{
 			var old = DutyCycleSp;
 			DutyCycleSp = speed;
 			RunTimed( ms );
 			DutyCycleSp = old;
+			return new LazyTask( WaitForStop );
 		}
 
 		public void Stop( )
 		{
-			Command = CommandStop;
+			Command = MotorCommands.CommandStop;
 		}
 
 		public void Stop( StopCommand command )
@@ -111,47 +115,51 @@ namespace Ev3Dev.CSharp.BasicDevices
 
 		public void Reset( )
 		{
-			Command = CommandReset;
+			Command = MotorCommands.CommandReset;
 		}
 
-		public void Run( int degrees )
+		public LazyTask Run( int degrees )
 		{
 			PositionSp = ( int )( degrees * ( CountPerRot / 360.0 ) );
-			Command = CommandRunToRelPos;
+			Command = MotorCommands.CommandRunToRelPos;
+			return new LazyTask( WaitForStop );
 		}
 
-		public void Run( int degrees, int speed )
+		public LazyTask Run( int degrees, int speed )
 		{
 			var old = DutyCycleSp;
 			DutyCycleSp = speed;
 			Run( degrees );
 			DutyCycleSp = old;
+			return new LazyTask( WaitForStop );
 		}
 
-		public void Run( float rotations )
+		public LazyTask Run( float rotations )
 		{
 			PositionSp = ( int )( rotations * CountPerRot );
-			Command = CommandRunToRelPos;
+			Command = MotorCommands.CommandRunToRelPos;
+			return new LazyTask( WaitForStop );
 		}
 
-		public void Run( float rotations, int speed )
+		public LazyTask Run( float rotations, int speed )
 		{
 			var old = DutyCycleSp;
 			DutyCycleSp = speed;
 			Run( rotations );
 			DutyCycleSp = old;
+			return new LazyTask( WaitForStop );
 		}
 
 		public void RunDirect( )
 		{
-			Command = CommandRunDirect;
+			Command = MotorCommands.CommandRunDirect;
 		}
 
-		public void WaitForStop( int waitTime = 50 )
+		public void WaitForStop( )
 		{
 			while ( DutyCycle != 0 )
 			{
-				Thread.Sleep( waitTime );
+				Thread.Sleep( PollPeriod );
 			}
 		}
 
@@ -159,11 +167,11 @@ namespace Ev3Dev.CSharp.BasicDevices
 		{
 			switch ( command )
 			{
-				case StopCommandCoast:
+				case MotorCommands.StopCommandCoast:
 					return StopCommand.Coast;
-				case StopCommandBrake:
+				case MotorCommands.StopCommandBrake:
 					return StopCommand.Brake;
-				case StopCommandHold:
+				case MotorCommands.StopCommandHold:
 					return StopCommand.Hold;
 				default:
 					return StopCommand.Coast;
@@ -175,13 +183,13 @@ namespace Ev3Dev.CSharp.BasicDevices
 			switch ( command )
 			{
 				case StopCommand.Coast:
-					return StopCommandCoast;
+					return MotorCommands.StopCommandCoast;
 				case StopCommand.Brake:
-					return StopCommandBrake;
+					return MotorCommands.StopCommandBrake;
 				case StopCommand.Hold:
-					return StopCommandHold;
+					return MotorCommands.StopCommandHold;
 				default:
-					return StopCommandCoast;
+					return MotorCommands.StopCommandCoast;
 			}
 		}
 	}

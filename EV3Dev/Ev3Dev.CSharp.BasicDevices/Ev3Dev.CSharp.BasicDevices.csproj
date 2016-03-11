@@ -43,6 +43,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LargeMotor.cs" />
+    <Compile Include="LazyTask.cs" />
     <Compile Include="LegoMotor.cs" />
     <Compile Include="MediumMotor.cs" />
     <Compile Include="Ports.cs" />
