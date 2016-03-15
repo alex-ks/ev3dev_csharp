@@ -2,6 +2,7 @@
 using System.Text;
 using System.Threading;
 using Ev3Dev.CSharp.BasicDevices;
+using Ev3Dev.CSharp.BasicDevices.Sensors;
 
 namespace Ev3Dev.CSharp.Demos
 {

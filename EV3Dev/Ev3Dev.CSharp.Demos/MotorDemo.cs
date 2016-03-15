@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using Ev3Dev.CSharp.BasicDevices;
+using Ev3Dev.CSharp.BasicDevices.Motors;
 
 namespace Ev3Dev.CSharp.Demos
 {

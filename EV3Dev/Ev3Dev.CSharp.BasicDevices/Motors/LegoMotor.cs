@@ -1,8 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Threading;
+﻿using System.Threading;
 using EV3Dev.CSharp;
 
-namespace Ev3Dev.CSharp.BasicDevices
+namespace Ev3Dev.CSharp.BasicDevices.Motors
 {
 	public enum Polarity
 	{

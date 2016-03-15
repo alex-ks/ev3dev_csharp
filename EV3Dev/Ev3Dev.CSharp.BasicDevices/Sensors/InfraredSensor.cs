@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Ev3Dev.CSharp.BasicDevices
+namespace Ev3Dev.CSharp.BasicDevices.Sensors
 {
 	public enum InfraredSensorMode
 	{
@@ -8,6 +8,10 @@ namespace Ev3Dev.CSharp.BasicDevices
 		IrSeeker,
 		IrRemoteControl,
 		IrRemoteControlAlternative,
+		/// <summary>
+		/// Tis mode is not usable. When switching to this mode, 
+		/// the sensor quits responding to the keep-alive messages and the sensor resets.
+		/// </summary>
 		IrSAlt,
 		IrCal
 	}
@@ -30,6 +34,8 @@ namespace Ev3Dev.CSharp.BasicDevices
 
 	public class InfraredSensor : Sensor
 	{
+		private const int ButtonEnumMax = 11;
+
 		public InfraredSensor( InputPort port ) : base( port.ToStringName( ), SuitableTypes )
 		{
 			
@@ -76,9 +82,13 @@ namespace Ev3Dev.CSharp.BasicDevices
 		/// <param name="channel">Channel of remote control signal (1-4).</param>
 		public RemoteControlButton GetPressedButton( int channel )
 		{
-			return Mode == InfraredSensorMode.IrRemoteControl
-				? ( RemoteControlButton )GetValue( channel - 1 )
-				: RemoteControlButton.None;
+			if ( Mode != InfraredSensorMode.IrRemoteControl )
+			{ return RemoteControlButton.None; }
+			var value = GetValue( channel - 1 );
+			if ( 0 <= value && value <= ButtonEnumMax )
+			{ return ( RemoteControlButton )value; }
+			else
+			{ return RemoteControlButton.None; }
 		}
 
 		private InfraredSensorMode StringToMode( string mode )
