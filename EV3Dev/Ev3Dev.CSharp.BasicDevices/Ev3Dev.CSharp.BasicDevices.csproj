@@ -42,14 +42,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="InfraredSensor.cs" />
-    <Compile Include="LargeMotor.cs" />
+    <Compile Include="Sensors\ColorSensor.cs" />
+    <Compile Include="Sensors\InfraredSensor.cs" />
+    <Compile Include="Motors\LargeMotor.cs" />
     <Compile Include="LazyTask.cs" />
-    <Compile Include="LegoMotor.cs" />
-    <Compile Include="MediumMotor.cs" />
+    <Compile Include="Motors\LegoMotor.cs" />
+    <Compile Include="Motors\MediumMotor.cs" />
     <Compile Include="Ports.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TouchSensor.cs" />
+    <Compile Include="Sensors\TouchSensor.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\EV3Dev.CSharp\Ev3Dev.CSharp.csproj">
