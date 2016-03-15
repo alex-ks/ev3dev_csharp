@@ -39,29 +39,50 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		/// </summary>
 		public int PollPeriod { get; set; } = 50;
 
+		/// <summary>
+		/// Sets the polarity of the motor. 
+		/// With normal polarity, a positive duty cycle will cause the motor to rotate clockwise. 
+		/// With inversed polarity, a positive duty cycle will cause the motor to rotate counter-clockwise.
+		/// </summary>
 		public new Polarity Polarity
 		{
 			get { return base.Polarity == MotorCommands.PolarityNormal ? Polarity.Normal : Polarity.Inversed; }
 			set { base.Polarity = value == Polarity.Normal ? MotorCommands.PolarityNormal : MotorCommands.PolarityInversed; }
 		}
 
+		/// <summary>
+		/// Turns speed regulation on or off. If speed regulation is on, 
+		/// the motor controller will vary the power supplied to the motor to try to maintain the speed specified in <see cref="Motor.SpeedSp"/>. 
+		/// If speed regulation is off, the controller will use the power specified in <see cref="Motor.DutyCycleSp"/>.
+		/// </summary>
 		public new bool SpeedRegulationEnabled
 		{
 			get { return base.SpeedRegulationEnabled == MotorCommands.SpeedRegulationOn; }
 			set { base.SpeedRegulationEnabled = value ? MotorCommands.SpeedRegulationOn : MotorCommands.SpeedRegulationOff; }
 		}
 
+		/// <summary>
+		/// The value determines the motors behavior when command <see cref="Stop()"/> is called. 
+		/// Also, it determines the motors behavior when a run command completes.
+		/// </summary>
 		public new StopCommand StopCommand
 		{
 			get { return StringToStopCommand( base.StopCommand ); }
 			set { base.StopCommand = StopCommandToString( value ); }
 		}
 
+		/// <summary>
+		/// Run the motor until another command is called.
+		/// </summary>
 		public void RunForever( )
 		{
 			Command = MotorCommands.CommandRunForever;
 		}
 
+		/// <summary>
+		/// Run the motor with specified speed until another command is called.
+		/// </summary>
+		/// <param name="speed">Motor speed in percents (from -100 to 100).</param>
 		public void RunForever( int speed )
 		{
 			var old = DutyCycleSp;
@@ -70,6 +91,12 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 			DutyCycleSp = old;
 		}
 
+		/// <summary>
+		/// Run the motor for the specified amount of time
+		/// and then stop the motor using the command specified by <see cref="StopCommand"/> property.
+		/// </summary>
+		/// <param name="ms">Time in milleseconds.</param>
+		/// <returns>Task for execution finish waiting.</returns>
 		public LazyTask RunTimed( int ms )
 		{
 			TimeSp = ms;
@@ -77,6 +104,13 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 			return new LazyTask( WaitForStop );
 		}
 
+		/// <summary>
+		/// Run the motor for the specified amount of time with te specified speed
+		/// and then stop the motor using the command specified by <see cref="StopCommand"/> property.
+		/// </summary>
+		/// <param name="ms">Time in milleseconds.</param>
+		/// <param name="speed">Motor speed in percents (from -100 to 100).</param>
+		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
 		public LazyTask RunTimed( int ms, int speed )
 		{
 			var old = DutyCycleSp;
@@ -86,11 +120,19 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 			return new LazyTask( WaitForStop );
 		}
 
+		/// <summary>
+		/// Stop any of the run commands before they are complete using the
+		/// command specified by <see cref="StopCommand"/> property.
+		/// </summary>
 		public void Stop( )
 		{
 			Command = MotorCommands.CommandStop;
 		}
 
+		/// <summary>
+		/// Stop any of the run commands before they are complete using the specified stop command.
+		/// </summary>
+		/// <param name="command">Describes how to stop the motor.</param>
 		public void Stop( StopCommand command )
 		{
 			var old = StopCommand;
@@ -99,11 +141,21 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 			StopCommand = old;
 		}
 
+		/// <summary>
+		/// Reset all of the motor parameter attributes to their default value.
+		/// This will also have the effect of stopping the motor.
+		/// </summary>
 		public void Reset( )
 		{
 			Command = MotorCommands.CommandReset;
 		}
 
+		/// <summary>
+		/// Turn the motor on specified amount of degrees and then stop the motor
+		/// using the command specified by <see cref="StopCommand"/> property.
+		/// </summary>
+		/// <param name="degrees">Amount of degrees to turn the motor.</param>
+		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
 		public LazyTask Run( int degrees )
 		{
 			PositionSp = ( int )( degrees * ( CountPerRot / 360.0 ) );
@@ -111,6 +163,13 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 			return new LazyTask( WaitForStop );
 		}
 
+		/// <summary>
+		/// Turn the motor on specified amount of degrees and then stop the motor
+		/// using the command specified by <see cref="StopCommand"/> property.
+		/// </summary>
+		/// <param name="degrees">Amount of degrees to turn the motor.</param>
+		/// <param name="speed">Motor speed in percents (from -100 to 100).</param>
+		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
 		public LazyTask Run( int degrees, int speed )
 		{
 			var old = DutyCycleSp;
@@ -120,6 +179,12 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 			return new LazyTask( WaitForStop );
 		}
 
+		/// <summary>
+		/// Turn the motor on specified amount of rotations and then stop the motor
+		/// using the command specified by <see cref="StopCommand"/> property.
+		/// </summary>
+		/// <param name="rotations">Amount of rotations to turn the motor.</param>
+		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
 		public LazyTask Run( float rotations )
 		{
 			PositionSp = ( int )( rotations * CountPerRot );
@@ -127,6 +192,13 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 			return new LazyTask( WaitForStop );
 		}
 
+		/// <summary>
+		/// Turn the motor on specified amount of rotations with the specified speed
+		/// and then stop the motor using the command specified by <see cref="StopCommand"/> property.
+		/// </summary>
+		/// <param name="rotations">Amount of rotations to turn the motor.</param>
+		/// <param name="speed">Motor speed in percents (from -100 to 100).</param>
+		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
 		public LazyTask Run( float rotations, int speed )
 		{
 			var old = DutyCycleSp;
@@ -136,11 +208,19 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 			return new LazyTask( WaitForStop );
 		}
 
+		/// <summary>
+		/// Run the motor at the duty cycle specified by <see cref="Motor.Speed"/>.
+		/// Unlike other run commands, changing <see cref="Motor.Speed"/> while running *will*
+		/// take effect immediately.
+		/// </summary>
 		public void RunDirect( )
 		{
 			Command = MotorCommands.CommandRunDirect;
 		}
 
+		/// <summary>
+		/// Wait until the motor speed is equal to 0.
+		/// </summary>
 		public void WaitForStop( )
 		{
 			while ( DutyCycle != 0 )
