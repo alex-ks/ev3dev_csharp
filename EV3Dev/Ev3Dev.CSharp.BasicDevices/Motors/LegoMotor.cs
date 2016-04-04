@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using EV3Dev.CSharp;
 
 namespace Ev3Dev.CSharp.BasicDevices.Motors
@@ -80,15 +81,79 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		}
 
 		/// <summary>
+		/// Run the motor with specified power until another command is called.
+		/// </summary>
+		/// <param name="power">Motor power in percents (from -100 to 100).</param>
+		/// <remarks>
+		/// This method reads old values of <see cref="Motor.DutyCycleSp"/> and <see cref="Motor.SpeedRegulationEnabled"/>, and if they are different from arguments
+		///	sets <see cref="Motor.SpeedRegulationEnabled"/> to <see cref="MotorCommands.SpeedRegulationOff"/>, <see cref="Motor.DutyCycleSp"/>
+		/// to power and then restores the old values.
+		/// </remarks>
+		public void RunForever( sbyte power )
+		{
+			var speedReg = SpeedRegulationEnabled;
+			var old = DutyCycleSp;
+
+			try
+			{
+				if ( old != power )
+				{ DutyCycleSp = power; }
+				if ( speedReg )
+				{ SpeedRegulationEnabled = false; }
+
+				Command = MotorCommands.CommandRunForever;
+			}
+			finally
+			{
+				// to avoid double throw
+				try
+				{
+					if ( old != power )
+					{ DutyCycleSp = old; }
+					if ( speedReg )
+					{ SpeedRegulationEnabled = speedReg; }
+				}
+				catch ( Exception )
+				{
+					// ignored
+				}
+			}
+		}
+
+		/// <summary>
 		/// Run the motor with specified speed until another command is called.
 		/// </summary>
-		/// <param name="speed">Motor speed in percents (from -100 to 100).</param>
+		/// <param name="speed">Motor speed in degrees per second.</param>
 		public void RunForever( int speed )
 		{
-			var old = DutyCycleSp;
-			DutyCycleSp = speed;
-			Command = MotorCommands.CommandRunForever;
-			DutyCycleSp = old;
+			var speedReg = SpeedRegulationEnabled;
+			var old = SpeedSp;
+			var tachoSpeed = ( int )( speed * ( CountPerRot / 360.0 ) );
+
+			try
+			{
+				if ( old != tachoSpeed )
+				{ SpeedSp = tachoSpeed; }
+				if ( !speedReg )
+				{ SpeedRegulationEnabled = true; }
+
+				Command = MotorCommands.CommandRunForever;
+			}
+			finally
+			{
+				// to avoid double throw
+				try
+				{
+					if ( tachoSpeed != old )
+					{ SpeedSp = old; }
+					if ( !speedReg )
+					{ SpeedRegulationEnabled = speedReg; }
+				}
+				catch ( Exception )
+				{
+					// ignored
+				}
+			}
 		}
 
 		/// <summary>
@@ -105,18 +170,83 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		}
 
 		/// <summary>
-		/// Run the motor for the specified amount of time with te specified speed
+		/// Run the motor for the specified amount of time with the specified power
 		/// and then stop the motor using the command specified by <see cref="StopCommand"/> property.
 		/// </summary>
 		/// <param name="ms">Time in milleseconds.</param>
-		/// <param name="speed">Motor speed in percents (from -100 to 100).</param>
+		/// <param name="power">Motor power in percents (from -100 to 100).</param>
+		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
+		public LazyTask RunTimed( int ms, sbyte power )
+		{
+			var old = DutyCycleSp;
+			var speedReg = SpeedRegulationEnabled;
+
+			try
+			{
+				if ( old != power )
+				{ DutyCycleSp = power; }
+				if ( speedReg )
+				{ SpeedRegulationEnabled = false; }
+
+				RunTimed( ms );
+			}
+			finally
+			{
+				// to avoid double throw
+				try
+				{
+					if ( old != power )
+					{ DutyCycleSp = old; }
+					if ( speedReg )
+					{ SpeedRegulationEnabled = true; }
+				}
+				catch ( Exception )
+				{
+					// ignored
+				}
+			}
+
+			return new LazyTask( WaitForStop );
+		}
+
+		/// <summary>
+		/// Run the motor for the specified amount of time with the specified speed
+		/// and then stop the motor using the command specified by <see cref="StopCommand"/> property.
+		/// </summary>
+		/// <param name="ms">Time in milleseconds.</param>
+		/// <param name="speed">Motor speed in degrees per second.</param>
 		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
 		public LazyTask RunTimed( int ms, int speed )
 		{
-			var old = DutyCycleSp;
-			DutyCycleSp = speed;
-			RunTimed( ms );
-			DutyCycleSp = old;
+			var old = SpeedSp;
+			var speedReg = SpeedRegulationEnabled;
+			var tachoSpeed = ( int )( speed * ( CountPerRot / 360.0 ) );
+
+			try
+			{
+				if ( old != tachoSpeed )
+				{ SpeedSp = tachoSpeed; }
+				if ( !speedReg )
+				{ SpeedRegulationEnabled = true; }
+
+				RunTimed( ms );
+			}
+			finally
+			{
+				// to avoid double throw
+				try
+				{
+					if ( old != tachoSpeed )
+					{ SpeedSp = old; }
+					if ( !speedReg )
+					{ SpeedRegulationEnabled = false; }
+				}
+				catch ( Exception )
+				{
+					// ignored
+				}
+			}
+
 			return new LazyTask( WaitForStop );
 		}
 
@@ -136,9 +266,11 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		public void Stop( StopCommand command )
 		{
 			var old = StopCommand;
-			StopCommand = command;
+			if ( command != old )
+			{ StopCommand = command; }
 			Stop( );
-			StopCommand = old;
+			if ( command != old )
+			{ StopCommand = old; }
 		}
 
 		/// <summary>
@@ -164,18 +296,83 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		}
 
 		/// <summary>
-		/// Turn the motor on specified amount of degrees and then stop the motor
+		/// Turn the motor on specified amount of degrees  with the specified power and then stop the motor
 		/// using the command specified by <see cref="StopCommand"/> property.
 		/// </summary>
 		/// <param name="degrees">Amount of degrees to turn the motor.</param>
-		/// <param name="speed">Motor speed in percents (from -100 to 100).</param>
+		/// <param name="power">Motor power in percents (from -100 to 100).</param>
+		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
+		public LazyTask Run( int degrees, sbyte power )
+		{
+			var old = DutyCycleSp;
+			var speedReg = SpeedRegulationEnabled;
+
+			try
+			{
+				if ( old != power )
+				{ DutyCycleSp = power; }
+				if ( speedReg )
+				{ SpeedRegulationEnabled = false; }
+
+				Run( degrees );
+			}
+			finally
+			{
+				// to avoid double throw
+				try
+				{
+					if ( old != power )
+					{ DutyCycleSp = old; }
+					if ( speedReg )
+					{ SpeedRegulationEnabled = true; }
+				}
+				catch ( Exception )
+				{
+					// ignored
+				}
+			}
+
+			return new LazyTask( WaitForStop );
+		}
+
+		/// <summary>
+		/// Turn the motor on specified amount of degrees  with the specified speed and then stop the motor
+		/// using the command specified by <see cref="StopCommand"/> property.
+		/// </summary>
+		/// <param name="degrees">Amount of degrees to turn the motor.</param>
+		/// <param name="speed">Motor speed in degrees per second.</param>
 		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
 		public LazyTask Run( int degrees, int speed )
 		{
-			var old = DutyCycleSp;
-			DutyCycleSp = speed;
-			Run( degrees );
-			DutyCycleSp = old;
+			var old = SpeedSp;
+			var speedReg = SpeedRegulationEnabled;
+			var tachoSpeed = ( int )( speed * ( CountPerRot / 360.0 ) );
+
+			try
+			{
+				if ( old != tachoSpeed )
+				{ SpeedSp = tachoSpeed; }
+				if ( !speedReg )
+				{ SpeedRegulationEnabled = true; }
+
+				Run( degrees );
+			}
+			finally
+			{
+				// to avoid double throw
+				try
+				{
+					if ( old != tachoSpeed )
+					{ SpeedSp = old; }
+					if ( !speedReg )
+					{ SpeedRegulationEnabled = false; }
+				}
+				catch ( Exception )
+				{
+					// ignored
+				}
+			}
+
 			return new LazyTask( WaitForStop );
 		}
 
@@ -193,18 +390,83 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		}
 
 		/// <summary>
-		/// Turn the motor on specified amount of rotations with the specified speed
+		/// Turn the motor on specified amount of rotations with the specified power
 		/// and then stop the motor using the command specified by <see cref="StopCommand"/> property.
 		/// </summary>
 		/// <param name="rotations">Amount of rotations to turn the motor.</param>
-		/// <param name="speed">Motor speed in percents (from -100 to 100).</param>
+		/// <param name="power">Motor power in percents (from -100 to 100).</param>
 		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
-		public LazyTask Run( float rotations, int speed )
+		public LazyTask Run( float rotations, sbyte power )
 		{
 			var old = DutyCycleSp;
-			DutyCycleSp = speed;
-			Run( rotations );
-			DutyCycleSp = old;
+			var speedReg = SpeedRegulationEnabled;
+
+			try
+			{
+				if ( old != power )
+				{ DutyCycleSp = power; }
+				if ( speedReg )
+				{ SpeedRegulationEnabled = false; }
+
+				Run( rotations );
+			}
+			finally
+			{
+				// to avoid double throw
+				try
+				{
+					if ( old != power )
+					{ DutyCycleSp = old; }
+					if ( speedReg )
+					{ SpeedRegulationEnabled = true; }
+				}
+				catch ( Exception )
+				{
+					// ignored
+				}
+			}
+
+			return new LazyTask( WaitForStop );
+		}
+
+		/// <summary>
+		/// Turn the motor on specified amount of rotations with the specified speed
+		/// and then stop the motor using the command specified by <see cref="StopCommand"/> property.
+		/// </summary>
+		/// <param name="rotations"></param>
+		/// <param name="speed"></param>
+		/// <returns></returns>
+		public LazyTask Run( float rotations, int speed )
+		{
+			var old = SpeedSp;
+			var speedReg = SpeedRegulationEnabled;
+			var tachoSpeed = ( int )( speed * ( CountPerRot / 360.0 ) );
+
+			try
+			{
+				if ( old != tachoSpeed )
+				{ SpeedSp = tachoSpeed; }
+				if ( !speedReg )
+				{ SpeedRegulationEnabled = true; }
+
+				Run( rotations );
+			}
+			finally
+			{
+				// to avoid double throw
+				try
+				{
+					if ( old != tachoSpeed )
+					{ SpeedSp = old; }
+					if ( !speedReg )
+					{ SpeedRegulationEnabled = false; }
+				}
+				catch ( Exception )
+				{
+					// ignored
+				}
+			}
+
 			return new LazyTask( WaitForStop );
 		}
 
@@ -218,12 +480,13 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 			Command = MotorCommands.CommandRunDirect;
 		}
 
+		//todo: check DutySycleSp while "hold" stop command
 		/// <summary>
 		/// Wait until the motor speed is equal to 0.
 		/// </summary>
 		public void WaitForStop( )
 		{
-			while ( DutyCycle != 0 )
+			while ( Speed != 0 )
 			{
 				Thread.Sleep( PollPeriod );
 			}

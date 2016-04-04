@@ -13,13 +13,13 @@ namespace Ev3Dev.CSharp.Demos
 			using ( var motor = new LargeMotor( OutputPort.OutB ) )
 			{
 				Console.Out.WriteLine( "One rotation..." );
-				motor.Run( rotations: 1.0f, speed: 75 ).Wait( );
+				motor.Run( rotations: 1.0f, power: 75 ).Wait( );
 
 				Console.Out.WriteLine( "One second run..." );
-				motor.RunTimed( ms: 1000, speed: 75 ).Wait( );
+				motor.RunTimed( ms: 1000, power: 75 ).Wait( );
 
 				Console.Out.WriteLine( "1.5 seconds back..." );
-				motor.RunForever( speed: -75 );
+				motor.RunForever( power: -75 );
 				Thread.Sleep( 1500 );
 				motor.Stop( );
 			}
