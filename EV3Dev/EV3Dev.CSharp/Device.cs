@@ -153,6 +153,18 @@ namespace Ev3Dev.CSharp
 		    return false;
 	    }
 
+		/// <summary>
+		/// Closes all connections to device attributes. Next access to the attribute will open the connection again.
+		/// </summary>
+		public void ResetConnections( )
+		{
+			foreach ( var stream in _writableAttributes )
+			{
+				stream.Value.Dispose( );
+			}
+			_writableAttributes.Clear( );
+		}
+
 	    public virtual void Dispose( )
 	    {
 		    foreach ( var stream in _writableAttributes )
