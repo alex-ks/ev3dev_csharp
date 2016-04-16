@@ -165,8 +165,9 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		public LazyTask RunTimed( int ms )
 		{
 			TimeSp = ms;
+			var start = DateTime.Now;
 			Command = MotorCommands.CommandRunTimed;
-			return new LazyTask( WaitForStop );
+			return new LazyTask( ( ) => WaitForPeriod( start, ms ) );
 		}
 
 		/// <summary>
@@ -188,7 +189,10 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 				if ( speedReg )
 				{ SpeedRegulationEnabled = false; }
 
+				var start = DateTime.Now;
 				RunTimed( ms );
+
+				return new LazyTask( ( ) => WaitForPeriod( start, ms ) );
 			}
 			finally
 			{
@@ -205,8 +209,6 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 					// ignored
 				}
 			}
-
-			return new LazyTask( WaitForStop );
 		}
 
 		/// <summary>
@@ -229,7 +231,10 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 				if ( !speedReg )
 				{ SpeedRegulationEnabled = true; }
 
+				var start = DateTime.Now;
 				RunTimed( ms );
+
+				return new LazyTask( ( ) => WaitForPeriod( start, ms ) );
 			}
 			finally
 			{
@@ -246,8 +251,6 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 					// ignored
 				}
 			}
-
-			return new LazyTask( WaitForStop );
 		}
 
 		/// <summary>
@@ -290,9 +293,11 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
 		public LazyTask Run( int degrees )
 		{
-			PositionSp = ( int )( degrees * ( CountPerRot / 360.0 ) );
+			var setPoint = ( int )( degrees * ( CountPerRot / 360.0 ) );
+			PositionSp = setPoint;
+			var finish = Position + setPoint;
 			Command = MotorCommands.CommandRunToRelPos;
-			return new LazyTask( WaitForStop );
+			return new LazyTask( ( ) => WaitForPosition( finish, degrees > 0 ) );
 		}
 
 		/// <summary>
@@ -314,7 +319,7 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 				if ( speedReg )
 				{ SpeedRegulationEnabled = false; }
 
-				Run( degrees );
+				return Run( degrees );
 			}
 			finally
 			{
@@ -331,8 +336,6 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 					// ignored
 				}
 			}
-
-			return new LazyTask( WaitForStop );
 		}
 
 		/// <summary>
@@ -355,7 +358,7 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 				if ( !speedReg )
 				{ SpeedRegulationEnabled = true; }
 
-				Run( degrees );
+				return Run( degrees );
 			}
 			finally
 			{
@@ -372,8 +375,6 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 					// ignored
 				}
 			}
-
-			return new LazyTask( WaitForStop );
 		}
 
 		/// <summary>
@@ -384,9 +385,11 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
 		public LazyTask Run( float rotations )
 		{
-			PositionSp = ( int )( rotations * CountPerRot );
+			var setPoint = ( int )( rotations * CountPerRot );
+			PositionSp = setPoint;
+			var finish = Position + setPoint;
 			Command = MotorCommands.CommandRunToRelPos;
-			return new LazyTask( WaitForStop );
+			return new LazyTask( ( ) => WaitForPosition( finish, rotations > 0 ) );
 		}
 
 		/// <summary>
@@ -408,7 +411,7 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 				if ( speedReg )
 				{ SpeedRegulationEnabled = false; }
 
-				Run( rotations );
+				return Run( rotations );
 			}
 			finally
 			{
@@ -425,8 +428,6 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 					// ignored
 				}
 			}
-
-			return new LazyTask( WaitForStop );
 		}
 
 		/// <summary>
@@ -449,7 +450,7 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 				if ( !speedReg )
 				{ SpeedRegulationEnabled = true; }
 
-				Run( rotations );
+				return Run( rotations );
 			}
 			finally
 			{
@@ -466,8 +467,6 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 					// ignored
 				}
 			}
-
-			return new LazyTask( WaitForStop );
 		}
 
 		/// <summary>
@@ -490,6 +489,37 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 			{
 				Thread.Sleep( PollPeriod );
 			}
+		}
+
+		public void WaitForPeriod( DateTime start, int ms )
+		{
+			var remain = ms - ( int )( DateTime.Now - start ).TotalMilliseconds;
+			if ( remain > 0 )
+			{ Thread.Sleep( remain ); }
+		}
+
+		/// <summary>
+		/// Wait until motor tacho counter reaches specified position.
+		/// </summary>
+		/// <param name="position">
+		/// Tacho counter position in pulses of rotary encoder. 
+		/// See <see cref="Motor.CountPerRot"/> for conversion info.
+		/// </param>
+		/// <param name="clockwise">
+		/// Direction of motor rotation.
+		/// </param>
+		public void WaitForPosition( int position, bool clockwise )
+		{
+			Func<int, bool> stopCriterion;
+			if ( clockwise )
+			{ stopCriterion = curr => curr >= position; }
+			else
+			{ stopCriterion = curr => curr <= position; }
+
+			while ( stopCriterion( Position ) )
+			{
+				Thread.Sleep( PollPeriod );
+			}	
 		}
 
 		private static StopCommand StringToStopCommand( string command )

@@ -17,13 +17,43 @@ namespace Ev3Dev.CSharp.BasicDevices
 		}
 
 		/// <summary>
-		/// Waits for the <see cref="LazyTask"/> to complete execution. Starts the execution if it hasn't been started already.
+		/// Waits for this <see cref="LazyTask"/> to complete execution. Starts the execution if it hasn't been started already.
 		/// </summary>
 		public new void Wait( )
 		{
 			if ( Status == TaskStatus.Created )
 			{ Start( ); }
 			base.Wait( );
+		}
+
+		public new bool IsCanceled
+		{
+			get
+			{
+				if ( Status == TaskStatus.Created )
+				{ Start( ); }
+				return base.IsCanceled;
+			}
+		}
+
+		public new bool IsCompleted
+		{
+			get
+			{
+				if ( Status == TaskStatus.Created )
+				{ Start( ); }
+				return base.IsCompleted;
+			}
+		}
+
+		public new bool IsFaulted
+		{
+			get
+			{
+				if ( Status == TaskStatus.Created )
+				{ Start( ); }
+				return base.IsFaulted;
+			}
 		}
 
 		/// <summary>
