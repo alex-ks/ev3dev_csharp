@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using EV3Dev.CSharp;
 
 namespace Ev3Dev.CSharp.BasicDevices.Motors
 {
@@ -28,6 +27,18 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		Hold
 	}
 
+	public enum SynchronizationMode
+	{
+		/// <summary>
+		/// Command completion waiting will be finished when the motor speed is equal to zero.
+		/// </summary>
+		WaitForStop,
+		/// <summary>
+		/// Command completion waiting will be finished when the command conditions are met.
+		/// </summary>
+		WaitForCompletion
+	}
+
 	public class LegoMotor : Motor
 	{
 		protected LegoMotor( OutputPort port, string motorType ) : base( port.ToStringName( ), motorType )
@@ -36,7 +47,17 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		}
 
 		/// <summary>
+		/// Determines command completion waiting behaviour 
+		/// (see <see cref="Motors.SynchronizationMode"/> for details).
+		/// Default mode is <see cref="Motors.SynchronizationMode.WaitForCompletion"/>.
+		/// </summary>
+		public SynchronizationMode SynchronizationMode { get; set; } = SynchronizationMode.WaitForCompletion;
+
+		/// <summary>
 		/// Period of motor polling when waiting for motor stop in milliseconds.
+		/// Matters only if <see cref="SynchronizationMode"/> is equal to 
+		/// <see cref="Motors.SynchronizationMode.WaitForStop"/>.
+		/// Default period is 50 ms. 
 		/// </summary>
 		public int PollPeriod { get; set; } = 50;
 
@@ -111,7 +132,7 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 					if ( old != power )
 					{ DutyCycleSp = old; }
 					if ( speedReg )
-					{ SpeedRegulationEnabled = speedReg; }
+					{ SpeedRegulationEnabled = true; }
 				}
 				catch ( Exception )
 				{
@@ -147,7 +168,7 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 					if ( tachoSpeed != old )
 					{ SpeedSp = old; }
 					if ( !speedReg )
-					{ SpeedRegulationEnabled = speedReg; }
+					{ SpeedRegulationEnabled = false; }
 				}
 				catch ( Exception )
 				{
@@ -167,7 +188,14 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 			TimeSp = ms;
 			var start = DateTime.Now;
 			Command = MotorCommands.CommandRunTimed;
-			return new LazyTask( ( ) => WaitForPeriod( start, ms ) );
+
+			Action waiter;
+			if ( SynchronizationMode == SynchronizationMode.WaitForCompletion )
+			{ waiter = ( ) => WaitForPeriod( start, ms ); }
+			else
+			{ waiter = WaitForStop; }
+
+			return new LazyTask( waiter );
 		}
 
 		/// <summary>
@@ -297,7 +325,14 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 			PositionSp = setPoint;
 			var finish = Position + setPoint;
 			Command = MotorCommands.CommandRunToRelPos;
-			return new LazyTask( ( ) => WaitForPosition( finish, degrees > 0 ) );
+
+			Action waiter;
+			if ( SynchronizationMode == SynchronizationMode.WaitForCompletion )
+			{ waiter = ( ) => WaitForPosition( finish, degrees > 0 ); }
+			else
+			{ waiter = WaitForStop; }
+
+			return new LazyTask( waiter );
 		}
 
 		/// <summary>
@@ -389,7 +424,14 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 			PositionSp = setPoint;
 			var finish = Position + setPoint;
 			Command = MotorCommands.CommandRunToRelPos;
-			return new LazyTask( ( ) => WaitForPosition( finish, rotations > 0 ) );
+
+			Action waiter;
+			if ( SynchronizationMode == SynchronizationMode.WaitForCompletion )
+			{ waiter = ( ) => WaitForPosition( finish, rotations > 0 ); }
+			else
+			{ waiter = WaitForStop; }
+
+			return new LazyTask( waiter );
 		}
 
 		/// <summary>

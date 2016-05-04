@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using Ev3Dev.CSharp;
 
-namespace EV3Dev.CSharp
+namespace Ev3Dev.CSharp
 {
 	public class Motor : Device
 	{

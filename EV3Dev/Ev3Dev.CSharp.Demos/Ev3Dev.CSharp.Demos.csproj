@@ -50,7 +50,7 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject>Ev3Dev.CSharp.Demos.GyroSensorDemo</StartupObject>
+    <StartupObject>Ev3Dev.CSharp.Demos.SoundDemo</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="ColorSensorDemo.cs" />
