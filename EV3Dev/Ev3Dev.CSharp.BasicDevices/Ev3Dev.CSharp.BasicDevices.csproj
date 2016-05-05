@@ -46,7 +46,6 @@
     <Compile Include="Sensors\GyroSensor.cs" />
     <Compile Include="Sensors\InfraredSensor.cs" />
     <Compile Include="Motors\LargeMotor.cs" />
-    <Compile Include="LazyTask.cs" />
     <Compile Include="Motors\LegoMotor.cs" />
     <Compile Include="Motors\MediumMotor.cs" />
     <Compile Include="Ports.cs" />

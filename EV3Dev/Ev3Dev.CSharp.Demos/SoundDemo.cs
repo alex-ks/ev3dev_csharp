@@ -21,11 +21,11 @@ namespace Ev3Dev.CSharp.Demos
 		public static void Main( string[] args )
 		{
 			Console.Out.WriteLine( "Beeping C#" );
-			Sound.Tone( Tones.Cis, 50, true );
+			Sound.Tone( Tones.Cis, 50 ).Wait( );
 			Console.Out.WriteLine( "Playing sequence" );
-			Sound.Tone( ImperialAnthem( ), true );
+			Sound.Tone( ImperialAnthem( ) ).Wait( );
 			Console.Out.WriteLine( "Speaking" );
-			Sound.Speak( "Good bye", 120, 200, true );
+			Sound.Speak( "Good bye", wordsPerMinute: 120, amplitude: 200 ).Wait( );
 		}
 	}
 }

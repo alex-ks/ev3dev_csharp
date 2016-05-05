@@ -2,13 +2,17 @@
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
-namespace Ev3Dev.CSharp.BasicDevices
+namespace Ev3Dev.CSharp
 {
 	/// <summary>
 	/// Lazy task will start only if someone wants to wait it execution.
 	/// Originally it is designed for waiting completion of motor asynchronous commands, which requires motor polling.
 	/// In this case, polling won't be executed if waiting is not necessary.
 	/// </summary>
+	/// <remarks>
+	/// You can use all ContinueWith methods of this class, 
+	/// but in this case you must call <see cref="Task.Start( )"/> manually.
+	/// </remarks>
 	public class LazyTask : Task
 	{
 		public LazyTask( Action action ) : base( action )
@@ -17,7 +21,8 @@ namespace Ev3Dev.CSharp.BasicDevices
 		}
 
 		/// <summary>
-		/// Waits for this <see cref="LazyTask"/> to complete execution. Starts the execution if it hasn't been started already.
+		/// Waits for this <see cref="LazyTask"/> to complete execution. 
+		/// Starts the execution if it hasn't been started already.
 		/// </summary>
 		public new void Wait( )
 		{
@@ -57,7 +62,8 @@ namespace Ev3Dev.CSharp.BasicDevices
 		}
 
 		/// <summary>
-		/// Gets an awaiter used to await this <see cref="LazyTask"/>. Starts the execution if it hasn't been started already.
+		/// Gets an awaiter used to await this <see cref="LazyTask"/>. 
+		/// Starts the execution if it hasn't been started already.
 		/// </summary>
 		public new TaskAwaiter GetAwaiter( )
 		{

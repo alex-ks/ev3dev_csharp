@@ -36,14 +36,12 @@ namespace Ev3Dev.CSharp
 		/// </summary>
 		/// <param name="frequency">Frequency of tone in Hz. Default EV3 value is 440Hz.</param>
 		/// <param name="ms">Duration of tone in milliseconds.</param>
-		/// <param name="synchronously">Indicates whether process should wait for playback end.</param>
-		public static void Tone( float frequency, float ms, bool synchronously )
+		public static LazyTask Tone( float frequency, float ms )
 		{
 			string command = $"-f {frequency} -l {ms}";
 			var proc = Process.Start( BeepPath, command );
 
-			if ( synchronously )
-			{ proc?.WaitForExit( ); }
+			return new LazyTask( ( ) => proc?.WaitForExit( ) );
 		}
 
 		/// <summary>
@@ -51,8 +49,7 @@ namespace Ev3Dev.CSharp
 		/// Frequences of basic tones are defined as constants in <see cref="Tones"/> class.
 		/// </summary>
 		/// <param name="sequence">Collection of tone descriptions. Tones will be played in the enumeration order.</param>
-		/// <param name="synchronously">Indicates whether process should wait for playback end.</param>
-		public static void Tone( IEnumerable<BeepDesc> sequence, bool synchronously )
+		public static LazyTask Tone( IEnumerable<BeepDesc> sequence )
 		{
 			StringBuilder builder = new StringBuilder( );
 			bool first = true;
@@ -69,21 +66,17 @@ namespace Ev3Dev.CSharp
 			
 			var proc = Process.Start( BeepPath, builder.ToString( ) );
 
-			if ( synchronously )
-			{ proc?.WaitForExit( ); }
+			return new LazyTask( ( ) => proc?.WaitForExit( ) );
 		}
 
 		/// <summary>
 		/// Play sound from file.
 		/// </summary>
 		/// <param name="soundFile">Name of file to play.</param>
-		/// <param name="synchronously">Indicates whether process should wait for playback end.</param>
-		public static void Play( string soundFile, bool synchronously )
+		public static LazyTask Play( string soundFile )
 		{
 			var proc = Process.Start( APlayPath, $"-q {soundFile}" );
-
-			if ( synchronously )
-			{ proc?.WaitForExit( ); }
+			return new LazyTask( ( ) => proc?.WaitForExit( ) );
 		}
 
 		/// <summary>
@@ -92,15 +85,15 @@ namespace Ev3Dev.CSharp
 		/// <param name="text">Text in English to speak.</param>
 		/// <param name="wordsPerMinute">Speech speed. Normal speed is 120-160 words per minute.</param>
 		/// <param name="amplitude">Affects speech volume. For default EV3 speakers values greater than 1500 can cause distortion.</param>
-		/// <param name="synchronously">Indicates whether process should wait for playback end.</param>
-		public static void Speak( string text, int wordsPerMinute, int amplitude, bool synchronously )
+		public static LazyTask Speak( string text, int wordsPerMinute, int amplitude )
 		{
+			text = text.Replace( @"'", @"\'" );
+			text = text.Replace( @"""", @"\""" );
 			string command = $"{ESpeakPath} -a {amplitude} -s {wordsPerMinute} --stdout \"{text}\" | {APlayPath} -q";
 
 			var proc = Process.Start( BashPath, $"-c '{command}'" );
 
-			if ( synchronously )
-			{ proc?.WaitForExit( ); }
+			return new LazyTask( ( ) => proc?.WaitForExit( ) );
 		}
 
 		private const string BeepPath = "/usr/bin/beep";
