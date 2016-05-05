@@ -182,7 +182,7 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		/// and then stop the motor using the command specified by <see cref="StopCommand"/> property.
 		/// </summary>
 		/// <param name="ms">Time in milleseconds.</param>
-		/// <returns>Task for execution finish waiting.</returns>
+		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
 		public LazyTask RunTimed( int ms )
 		{
 			TimeSp = ms;
@@ -314,6 +314,56 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		}
 
 		/// <summary>
+		/// Run the motor until the <see cref="Motor.Position"/> reaches specified value 
+		/// using the command specified by <see cref="StopCommand"/> property.
+		/// Note: motor position becomes equal to zero when <see cref="Reset"/> is called.
+		/// </summary>
+		/// <param name="position">Motor position in tacho counts.</param>
+		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
+		public LazyTask RunToPosition( int position )
+		{
+			PositionSp = position;
+			Command = MotorCommands.CommandRunToAbsPos;
+			var currentPosition = Position;
+
+			Action waiter;
+			if ( SynchronizationMode == SynchronizationMode.WaitForCompletion )
+			{ waiter = ( ) => WaitForPosition( position, position - currentPosition > 0 ); }
+			else
+			{ waiter = WaitForStop; }
+
+			return new LazyTask( waiter );
+		}
+
+		/// <summary>
+		/// Run the motor until the <see cref="Motor.Position"/> reaches specified value 
+		/// with the specified power and then stop the motor
+		/// using the command specified by <see cref="StopCommand"/> property.
+		/// Note: motor position becomes equal to zero when <see cref="Reset"/> is called.
+		/// </summary>
+		/// <param name="position">Motor position in tacho counts.</param>
+		/// <param name="power">Motor power in percents (from -100 to 100).</param>
+		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
+		public LazyTask RunToPosition( int position, sbyte power )
+		{
+			return BackupDutyCycleAndRun( power, ( ) => RunToPosition( position ) );
+		}
+
+		/// <summary>
+		/// Run the motor until the <see cref="Motor.Position"/> reaches specified value 
+		/// with the specified speed and then stop the motor
+		/// using the command specified by <see cref="StopCommand"/> property.
+		/// Note: motor position becomes equal to zero when <see cref="Reset"/> is called.
+		/// </summary>
+		/// <param name="position">Motor position in tacho counts.</param>
+		/// <param name="speed">Motor speed in degrees per second.</param>
+		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
+		public LazyTask RunToPosition( int position, int speed )
+		{
+			return BackupSpeedAndRun( speed, ( ) => RunToPosition( position ) );
+		}
+
+		/// <summary>
 		/// Turn the motor on specified amount of degrees and then stop the motor
 		/// using the command specified by <see cref="StopCommand"/> property.
 		/// </summary>
@@ -336,7 +386,7 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		}
 
 		/// <summary>
-		/// Turn the motor on specified amount of degrees  with the specified power and then stop the motor
+		/// Turn the motor on specified amount of degrees with the specified power and then stop the motor
 		/// using the command specified by <see cref="StopCommand"/> property.
 		/// </summary>
 		/// <param name="degrees">Amount of degrees to turn the motor.</param>
@@ -344,33 +394,7 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
 		public LazyTask Run( int degrees, sbyte power )
 		{
-			var old = DutyCycleSp;
-			var speedReg = SpeedRegulationEnabled;
-
-			try
-			{
-				if ( old != power )
-				{ DutyCycleSp = power; }
-				if ( speedReg )
-				{ SpeedRegulationEnabled = false; }
-
-				return Run( degrees );
-			}
-			finally
-			{
-				// to avoid double throw
-				try
-				{
-					if ( old != power )
-					{ DutyCycleSp = old; }
-					if ( speedReg )
-					{ SpeedRegulationEnabled = true; }
-				}
-				catch ( Exception )
-				{
-					// ignored
-				}
-			}
+			return BackupDutyCycleAndRun( power, ( ) => Run( degrees ) );
 		}
 
 		/// <summary>
@@ -382,34 +406,7 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
 		public LazyTask Run( int degrees, int speed )
 		{
-			var old = SpeedSp;
-			var speedReg = SpeedRegulationEnabled;
-			var tachoSpeed = ( int )( speed * ( CountPerRot / 360.0 ) );
-
-			try
-			{
-				if ( old != tachoSpeed )
-				{ SpeedSp = tachoSpeed; }
-				if ( !speedReg )
-				{ SpeedRegulationEnabled = true; }
-
-				return Run( degrees );
-			}
-			finally
-			{
-				// to avoid double throw
-				try
-				{
-					if ( old != tachoSpeed )
-					{ SpeedSp = old; }
-					if ( !speedReg )
-					{ SpeedRegulationEnabled = false; }
-				}
-				catch ( Exception )
-				{
-					// ignored
-				}
-			}
+			return BackupSpeedAndRun( speed, ( ) => Run( degrees ) );
 		}
 
 		/// <summary>
@@ -443,33 +440,7 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		/// <returns>A <see cref="LazyTask"/> to wait the execution competion.</returns>
 		public LazyTask Run( float rotations, sbyte power )
 		{
-			var old = DutyCycleSp;
-			var speedReg = SpeedRegulationEnabled;
-
-			try
-			{
-				if ( old != power )
-				{ DutyCycleSp = power; }
-				if ( speedReg )
-				{ SpeedRegulationEnabled = false; }
-
-				return Run( rotations );
-			}
-			finally
-			{
-				// to avoid double throw
-				try
-				{
-					if ( old != power )
-					{ DutyCycleSp = old; }
-					if ( speedReg )
-					{ SpeedRegulationEnabled = true; }
-				}
-				catch ( Exception )
-				{
-					// ignored
-				}
-			}
+			return BackupDutyCycleAndRun( power, ( ) => Run( rotations ) );
 		}
 
 		/// <summary>
@@ -481,34 +452,7 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		/// <returns></returns>
 		public LazyTask Run( float rotations, int speed )
 		{
-			var old = SpeedSp;
-			var speedReg = SpeedRegulationEnabled;
-			var tachoSpeed = ( int )( speed * ( CountPerRot / 360.0 ) );
-
-			try
-			{
-				if ( old != tachoSpeed )
-				{ SpeedSp = tachoSpeed; }
-				if ( !speedReg )
-				{ SpeedRegulationEnabled = true; }
-
-				return Run( rotations );
-			}
-			finally
-			{
-				// to avoid double throw
-				try
-				{
-					if ( old != tachoSpeed )
-					{ SpeedSp = old; }
-					if ( !speedReg )
-					{ SpeedRegulationEnabled = false; }
-				}
-				catch ( Exception )
-				{
-					// ignored
-				}
-			}
+			return BackupSpeedAndRun( speed, ( ) => Run( rotations ) );
 		}
 
 		/// <summary>
@@ -562,6 +506,69 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 			{
 				Thread.Sleep( PollPeriod );
 			}	
+		}
+
+		private LazyTask BackupSpeedAndRun( int speed, Func<LazyTask> action )
+		{
+			var old = SpeedSp;
+			var speedReg = SpeedRegulationEnabled;
+			var tachoSpeed = ( int )( speed * ( CountPerRot / 360.0 ) );
+
+			try
+			{
+				if ( old != tachoSpeed )
+				{ SpeedSp = tachoSpeed; }
+				if ( !speedReg )
+				{ SpeedRegulationEnabled = true; }
+
+				return action( );
+			}
+			finally
+			{
+				// to avoid double throw
+				try
+				{
+					if ( old != tachoSpeed )
+					{ SpeedSp = old; }
+					if ( !speedReg )
+					{ SpeedRegulationEnabled = false; }
+				}
+				catch ( Exception )
+				{
+					// ignored
+				}
+			}
+		}
+
+		private LazyTask BackupDutyCycleAndRun( sbyte power, Func<LazyTask> action )
+		{
+			var old = DutyCycleSp;
+			var speedReg = SpeedRegulationEnabled;
+
+			try
+			{
+				if ( old != power )
+				{ DutyCycleSp = power; }
+				if ( speedReg )
+				{ SpeedRegulationEnabled = false; }
+
+				return action( );
+			}
+			finally
+			{
+				// to avoid double throw
+				try
+				{
+					if ( old != power )
+					{ DutyCycleSp = old; }
+					if ( speedReg )
+					{ SpeedRegulationEnabled = true; }
+				}
+				catch ( Exception )
+				{
+					// ignored
+				}
+			}
 		}
 
 		private static StopCommand StringToStopCommand( string command )
