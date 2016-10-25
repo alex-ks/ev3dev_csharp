@@ -1,19 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
+using System.IO;
+using Ev3Dev.CSharp.Accessors;
 
 namespace Ev3Dev.CSharp
 {
 	public abstract class Device : IDisposable
     {
-	    private string _path;
+        public static Func<IAttributeAccessor> PropertyAccessorProvider { get; set; } =
+            ( ) => new AttributeAccessor( );
+
+        private string _path;
 	    private int _deviceIndex = -1;
-	    private readonly IDictionary<string, StreamWriter> _writableAttributes;
+        private readonly IAttributeAccessor _accessor;
 
 	    protected Device( )
 	    {
-		    _writableAttributes = new Dictionary<string, StreamWriter>( );
+            _accessor = PropertyAccessorProvider( );
 	    }
 
 	    public bool Connected => !string.IsNullOrEmpty( _path );
@@ -22,7 +26,10 @@ namespace Ev3Dev.CSharp
 	    {
 		    get
 		    {
-			    if ( _deviceIndex < 0 )
+                if ( !Connected )
+                { throw new InvalidOperationException( "Device is not connected" ); }
+
+                if ( _deviceIndex < 0 )
 			    {
 				    int rank = 1;
 				    _deviceIndex = 0;
@@ -42,77 +49,64 @@ namespace Ev3Dev.CSharp
 		    if ( !Connected )
 		    { throw new InvalidOperationException( "Device is not connected" ); }
 
-		    using ( var stream = new FileStream( Path.Combine( _path, attributeName ), FileMode.Open, FileAccess.Read, FileShare.ReadWrite ) )
-		    {
-			    using ( var reader = new StreamReader( stream ) )
-			    {
-				    return reader.ReadToEnd( );
-			    }
-		    }
+            return _accessor.GetStringAttribute( Path.Combine( _path, attributeName ) );
 	    }
 
 		protected string[] GetStringArrayAttribute( string attributeName )
 		{
-			return GetStringAttribute( attributeName ).Split( );
+            if ( !Connected )
+            { throw new InvalidOperationException( "Device is not connected" ); }
+
+            return _accessor.GetStringArrayAttribute( Path.Combine( _path, attributeName ) );
 		}
 
 		protected string[] GetStringSelectorAttribute( string attributeName, out string selected )
 		{
-			var variants = GetStringArrayAttribute( attributeName );
-			selected = null;
-
-			for ( int i = 0; i < variants.Length; ++i )
-			{
-				if ( variants[i].StartsWith( "[" ) && variants[i].EndsWith( "]" ) )
-				{
-					selected = variants[i].Substring( 1, variants[i].Length - 2 );
-					variants[i] = selected;
-					break;
-				}
-			}
+            if ( !Connected )
+            { throw new InvalidOperationException( "Device is not connected" ); }
 			
-			return variants;
+			return _accessor.GetStringSelectorAttribute( Path.Combine( _path, attributeName ), 
+                                                         out selected );
 		}
 
 	    protected void SetStringAttribute( string attributeName, string value )
 	    {
-		    StreamWriter writer;
-		    if ( !_writableAttributes.ContainsKey( attributeName ) )
-		    {
-				var stream = new FileStream( Path.Combine( _path, attributeName ), FileMode.Open, FileAccess.Write, FileShare.Read );
-				writer = new StreamWriter( stream );
-				_writableAttributes.Add( attributeName, writer );
-		    }
-		    else
-		    {
-			    writer = _writableAttributes[attributeName];
-		    }
-			writer.Write( value );
-		    writer.Flush( );
-	    }
+            if ( !Connected )
+            { throw new InvalidOperationException( "Device is not connected" ); }
+
+            _accessor.SetStringAttribute( Path.Combine( _path, attributeName ), value );
+        }
 
 	    protected void SetIntAttribute( string attributeName, int value )
 	    {
-		    SetStringAttribute( attributeName, value.ToString( ) );
-	    }
+            if ( !Connected )
+            { throw new InvalidOperationException( "Device is not connected" ); }
+
+            _accessor.SetIntAttribute( Path.Combine( _path, attributeName ), value );
+        }
 
 	    protected int GetIntAttribute( string attributeName )
 	    {
-		    return int.Parse( GetStringAttribute( attributeName ) );
-	    }
+            if ( !Connected )
+            { throw new InvalidOperationException( "Device is not connected" ); }
+
+            return _accessor.GetIntAttribute( Path.Combine( _path, attributeName ) );
+        }
 
 		protected int GetRawData( string attributeName, byte[] buffer, int offset, int count )
 		{
 			if ( !Connected )
 			{ throw new InvalidOperationException( "Device is not connected" ); }
 
-			using ( var stream = new FileStream( Path.Combine( _path, attributeName ), FileMode.Open, FileAccess.Read ) )
-			{
-				return stream.Read( buffer, offset, count );
-			}
+            return _accessor.GetRawData( Path.Combine( _path, attributeName ), 
+                                         buffer,
+                                         offset,
+                                         count );
 		}
 
-		protected bool Connect( string classDirectory, string pattern, IDictionary<string, string[]> matchCriteria )
+		protected bool Connect( string classDirectory, 
+                                string pattern, 
+                                IDictionary<string, string[]> matchCriteria )
 	    {
 			if ( !Directory.Exists( classDirectory ) )
 			{ return false; }
@@ -128,7 +122,9 @@ namespace Ev3Dev.CSharp
 
 				    foreach ( var matchCriterion in matchCriteria )
 				    {
-					    using ( var attributeStream = new FileStream( $@"{directory}/{matchCriterion.Key}", FileMode.Open, FileAccess.Read ) )
+					    using ( var attributeStream = new FileStream( $@"{directory}/{matchCriterion.Key}",
+                                                                      FileMode.Open, 
+                                                                      FileAccess.Read ) )
 					    {
 						    using ( var reader = new StreamReader( attributeStream ) )
 						    {
@@ -154,23 +150,17 @@ namespace Ev3Dev.CSharp
 	    }
 
 		/// <summary>
-		/// Closes all connections to device attributes. Next access to the attribute will open the connection again.
+		/// Closes all connections to device attributes. 
+        /// Next access to the attribute will open the connection again.
 		/// </summary>
 		public void ResetConnections( )
 		{
-			foreach ( var stream in _writableAttributes )
-			{
-				stream.Value.Dispose( );
-			}
-			_writableAttributes.Clear( );
+            _accessor.ResetConnections( );
 		}
 
 	    public virtual void Dispose( )
 	    {
-		    foreach ( var stream in _writableAttributes )
-		    {
-			    stream.Value.Dispose( );
-		    }
+            _accessor.Dispose( );
 	    }
 
 		public const string SysRoot = @"/sys/class";
