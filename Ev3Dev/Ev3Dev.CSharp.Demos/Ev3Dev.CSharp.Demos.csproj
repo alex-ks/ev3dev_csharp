@@ -69,7 +69,7 @@
       <Project>{aedcd58c-aefe-4c33-ba20-32cecbb686bd}</Project>
       <Name>Ev3Dev.CSharp.BasicDevices</Name>
     </ProjectReference>
-    <ProjectReference Include="..\EV3Dev.CSharp\Ev3Dev.CSharp.csproj">
+    <ProjectReference Include="..\Ev3Dev.CSharp\Ev3Dev.CSharp.csproj">
       <Project>{e573fbda-25aa-4e72-8d29-9872f42c80f6}</Project>
       <Name>Ev3Dev.CSharp</Name>
     </ProjectReference>

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ev3Dev.CSharp", "EV3Dev.CSharp\Ev3Dev.CSharp.csproj", "{E573FBDA-25AA-4E72-8D29-9872F42C80F6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ev3Dev.CSharp", "Ev3Dev.CSharp\Ev3Dev.CSharp.csproj", "{E573FBDA-25AA-4E72-8D29-9872F42C80F6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ev3Dev.CSharp.BasicDevices", "Ev3Dev.CSharp.BasicDevices\Ev3Dev.CSharp.BasicDevices.csproj", "{AEDCD58C-AEFE-4C33-BA20-32CECBB686BD}"
 EndProject
