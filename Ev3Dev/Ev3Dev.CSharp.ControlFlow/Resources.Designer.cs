@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Ev3Dev.CSharp.ControlFlow {
+namespace Ev3Dev.CSharp.EvA {
     using System;
     
     
@@ -84,6 +84,24 @@ namespace Ev3Dev.CSharp.ControlFlow {
         internal static string InvalidAsyncAction {
             get {
                 return ResourceManager.GetString("InvalidAsyncAction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Trigger {0} of event handler {1} must be bool.
+        /// </summary>
+        internal static string InvalidEventTrigger {
+            get {
+                return ResourceManager.GetString("InvalidEventTrigger", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Event handler {0} must have at least one trigger.
+        /// </summary>
+        internal static string InvalidEventTriggerCount {
+            get {
+                return ResourceManager.GetString("InvalidEventTriggerCount", resourceCulture);
             }
         }
         

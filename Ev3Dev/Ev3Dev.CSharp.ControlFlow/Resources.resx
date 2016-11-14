@@ -126,6 +126,12 @@
   <data name="InvalidAsyncAction" xml:space="preserve">
     <value>Async action {0} must return object of class Task</value>
   </data>
+  <data name="InvalidEventTrigger" xml:space="preserve">
+    <value>Trigger {0} of event handler {1} must be bool</value>
+  </data>
+  <data name="InvalidEventTriggerCount" xml:space="preserve">
+    <value>Event handler {0} must have at least one trigger</value>
+  </data>
   <data name="InvalidShutdownEvent" xml:space="preserve">
     <value>Shutdown event property must have bool type</value>
   </data>

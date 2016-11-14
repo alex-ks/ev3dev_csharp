@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Ev3Dev.CSharp.ControlFlow
+namespace Ev3Dev.CSharp.EvA
 {
     /// <summary>
     /// Declares that selected method should be called for each loop iteration.

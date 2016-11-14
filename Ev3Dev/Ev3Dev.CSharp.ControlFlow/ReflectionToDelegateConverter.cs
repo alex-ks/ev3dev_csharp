@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Ev3Dev.CSharp.ControlFlow
+namespace Ev3Dev.CSharp.EvA
 {
     /// <summary>
     /// See http://blogs.msmvps.com/jonskeet/2008/08/09/making-reflection-fly-and-exploring-delegates/

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Ev3Dev.CSharp.ControlFlow
+namespace Ev3Dev.CSharp.EvA
 {
     // its guaranteered that properties won't be called simultaneously, so there is no need to make them reenterable
     /// <summary>

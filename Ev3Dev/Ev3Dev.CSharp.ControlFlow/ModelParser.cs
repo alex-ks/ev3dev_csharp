@@ -7,10 +7,16 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Ev3Dev.CSharp.ControlFlow
+namespace Ev3Dev.CSharp.EvA
 {
     public static class ModelParser
     {
+        private struct EventHandler
+        {
+            public Func<bool> Trigger { get; set; }
+            public Action Handler { get; set; }
+        }
+
         public static void RegisterModel( this EventLoop loop, object model )
         {
             var type = model.GetType( );
@@ -22,6 +28,7 @@ namespace Ev3Dev.CSharp.ControlFlow
 
             var eventsToAdd = new List<Func<bool>>( );
 
+            // parse events that will cause loop shutdown
             foreach ( var prop in shutdownEvents )
             {
                 if ( prop.PropertyType != typeof( bool ) )
@@ -30,7 +37,8 @@ namespace Ev3Dev.CSharp.ControlFlow
                 var shutdownEvent = CreateGetter<bool>( model, prop );
                 eventsToAdd.Add( shutdownEvent );
             }
-            
+
+            // parse actions that will be performed on each iteration
             var actions = from method in type.GetMethods( )
                           let attribute = method.GetCustomAttribute<ActionAttribute>( )
                           where attribute != null
@@ -53,16 +61,73 @@ namespace Ev3Dev.CSharp.ControlFlow
                 { actionsToAdd.Add( performAction ); }
             }
 
-            var synchronousEvents = new Dictionary<string, Func<bool>>( );
+            // parse event handlers and their triggers
+            var eventHandlersToAdd = new List<Tuple<Func<bool>, Action>>( );
+            var synchronousEventHandlers = new Dictionary<string, Tuple<Func<bool>, Action>>( );
 
             var eventHandlers = from method in type.GetMethods( )
                                 let attribute = method.GetCustomAttribute<EventHandlerAttribute>( )
                                 where attribute != null
                                 select new { Method = method, Attribute = attribute };
-
+            
             foreach ( var eventHandler in eventHandlers )
             {
-                //todo: implement event handlers
+                var method = eventHandler.Method;
+                var triggers = new List<Func<bool>>( );
+
+                if ( eventHandler.Attribute.Triggers.Length == 0 )
+                {
+                    throw new InvalidOperationException( string.Format( Resources.InvalidEventTriggerCount,
+                                                                        method.Name ) );
+                }
+
+                // get trigger flags
+                foreach ( var trigger in eventHandler.Attribute.Triggers )
+                {
+                    try
+                    {
+                        var triggerFunc = CreateGetter<bool>( model, type.GetProperty( trigger ) );
+                        triggers.Add( triggerFunc );
+                    }
+                    catch ( ArgumentException )
+                    {
+                        throw new InvalidOperationException( string.Format( Resources.InvalidEventTrigger,
+                                                                            trigger,
+                                                                            method.Name ) );
+                    }
+                }
+
+                Func<bool, bool, bool> compositionFunc;
+                if ( eventHandler.Attribute.TriggerComposition == CompositionType.AND )
+                { compositionFunc = ( a, b ) => a && b; }
+                else
+                { compositionFunc = ( a, b ) => a || b; }
+
+                Func<bool> compositeTrigger = ( ) =>
+                {
+                    var result = triggers[0]( );
+                    foreach ( var trigger in triggers.Skip( 1 ) )
+                    { result = compositionFunc( result, trigger( ) ); }
+                    return result;
+                };
+
+                bool reenterable;
+
+                Action performAction = !IsAsync( method ) ?
+                    GetMethodAction( model, method, out reenterable ) :
+                    GetAsyncMethodAction( model, method, out reenterable );
+
+                if ( !reenterable )
+                {
+                    synchronousEventHandlers.Add( method.Name, 
+                                                  new Tuple<Func<bool>, Action>( compositeTrigger, 
+                                                                                 performAction ) );
+                }
+                else
+                {
+                    eventHandlersToAdd.Add( new Tuple<Func<bool>, Action>( compositeTrigger,
+                                                                           performAction ) );
+                }
             }
 
             //todo: implement mutual exclusion
