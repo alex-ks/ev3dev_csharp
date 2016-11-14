@@ -144,6 +144,9 @@
   <data name="SourceTypeMismatch" xml:space="preserve">
     <value>Type of source {0} does not match the type of parameter {1} of action {2}</value>
   </data>
+  <data name="UnknownTriggerComposition" xml:space="preserve">
+    <value>Unknown trigger composition for event handler {0}</value>
+  </data>
   <data name="WrongParamsCount" xml:space="preserve">
     <value>Method must have {0} parameters</value>
   </data>

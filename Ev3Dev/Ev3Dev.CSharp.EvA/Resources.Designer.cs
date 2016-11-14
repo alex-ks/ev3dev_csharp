@@ -39,7 +39,7 @@ namespace Ev3Dev.CSharp.EvA {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Ev3Dev.CSharp.ControlFlow.Resources", typeof(Resources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Ev3Dev.CSharp.EvA.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -138,6 +138,15 @@ namespace Ev3Dev.CSharp.EvA {
         internal static string SourceTypeMismatch {
             get {
                 return ResourceManager.GetString("SourceTypeMismatch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unknown trigger composition for event handler {0}.
+        /// </summary>
+        internal static string UnknownTriggerComposition {
+            get {
+                return ResourceManager.GetString("UnknownTriggerComposition", resourceCulture);
             }
         }
         
