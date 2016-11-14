@@ -45,25 +45,39 @@ namespace Ev3Dev.CSharp.EvA
                           select method;
 
             var actionsToAdd = new List<Action>( );
-            var synchronousMethods = new Dictionary<string, Action>( );
+
+            // to keep actions that potentially need mutual exclusion
+            var nonReenterableMethods = new Dictionary<string, Action>( );
+            var nonReenterableAsyncs = new Dictionary<string, Func<Task>>( );
 
             foreach ( var method in actions )
             {
                 bool reenterable;
 
-                Action performAction = !IsAsync( method ) ?
-                    GetMethodAction( model, method, out reenterable ) :
-                    GetAsyncMethodAction( model, method, out reenterable );
-
-                if ( !reenterable )
-                { synchronousMethods.Add( method.Name, performAction ); }
+                if ( !IsAsync( method ) )
+                {
+                    Action performAction = GetMethodAction( model, method, out reenterable );
+                    if ( reenterable )
+                    { actionsToAdd.Add( performAction ); }
+                    else
+                    { nonReenterableMethods.Add( method.Name, performAction ); }
+                }
                 else
-                { actionsToAdd.Add( performAction ); }
+                {
+                    Func<Task> performAsync = GetAsyncMethodAction( model, method, out reenterable );
+                    if ( reenterable )
+                    { actionsToAdd.Add( ( ) => performAsync( ) ); }
+                    else
+                    { nonReenterableAsyncs.Add( method.Name, performAsync ); }
+                }
             }
 
             // parse event handlers and their triggers
             var eventHandlersToAdd = new List<Tuple<Func<bool>, Action>>( );
-            var synchronousEventHandlers = new Dictionary<string, Tuple<Func<bool>, Action>>( );
+            
+            // to keep handlers that potentially need mutual exclusion
+            var nonReenterableEventHandlers = new Dictionary<string, Tuple<Func<bool>, Action>>( );
+            var nonReenterableEventAsyncs = new Dictionary<string, Tuple<Func<bool>, Func<Task>>>( );
 
             var eventHandlers = from method in type.GetMethods( )
                                 let attribute = method.GetCustomAttribute<EventHandlerAttribute>( )
@@ -100,8 +114,13 @@ namespace Ev3Dev.CSharp.EvA
                 Func<bool, bool, bool> compositionFunc;
                 if ( eventHandler.Attribute.TriggerComposition == CompositionType.AND )
                 { compositionFunc = ( a, b ) => a && b; }
-                else
+                else if ( eventHandler.Attribute.TriggerComposition == CompositionType.OR )
                 { compositionFunc = ( a, b ) => a || b; }
+                else
+                {
+                    throw new InvalidOperationException( string.Format( Resources.UnknownTriggerComposition,
+                                                                        method.Name ) );
+                }
 
                 Func<bool> compositeTrigger = ( ) =>
                 {
@@ -113,20 +132,35 @@ namespace Ev3Dev.CSharp.EvA
 
                 bool reenterable;
 
-                Action performAction = !IsAsync( method ) ?
-                    GetMethodAction( model, method, out reenterable ) :
-                    GetAsyncMethodAction( model, method, out reenterable );
-
-                if ( !reenterable )
+                if ( !IsAsync( method ) )
                 {
-                    synchronousEventHandlers.Add( method.Name, 
-                                                  new Tuple<Func<bool>, Action>( compositeTrigger, 
-                                                                                 performAction ) );
+                    Action performAction = GetMethodAction( model, method, out reenterable );
+                    if ( reenterable )
+                    {
+                        eventHandlersToAdd.Add( new Tuple<Func<bool>, Action>( compositeTrigger,
+                                                                               performAction ) );
+                    }
+                    else
+                    {
+                        nonReenterableEventHandlers.Add( method.Name,
+                                                         new Tuple<Func<bool>, Action>( compositeTrigger,
+                                                                                        performAction ) );
+                    }
                 }
                 else
                 {
-                    eventHandlersToAdd.Add( new Tuple<Func<bool>, Action>( compositeTrigger,
-                                                                           performAction ) );
+                    Func<Task> performAsync = GetAsyncMethodAction( model, method, out reenterable );
+                    if ( reenterable )
+                    {
+                        eventHandlersToAdd.Add( new Tuple<Func<bool>, Action>( compositeTrigger,
+                                                                               ( ) => performAsync( ) ) );
+                    }
+                    else
+                    {
+                        nonReenterableEventAsyncs.Add( method.Name,
+                                                       new Tuple<Func<bool>, Func<Task>>( compositeTrigger,
+                                                                                          performAsync ) );
+                    }
                 }
             }
 
@@ -208,7 +242,8 @@ namespace Ev3Dev.CSharp.EvA
                                                                     method.Name ) );
             }
 
-            if ( method.GetCustomAttribute<EventHandlerAttribute>( ) != null )
+            if ( method.GetCustomAttribute<EventHandlerAttribute>( ) != null
+                 && method.GetCustomAttribute<ActionAttribute>( ) != null )
             {
                 throw new InvalidOperationException( string.Format( Resources.ActionCantBeHandler,
                                                                     method.Name ) );
@@ -278,10 +313,10 @@ namespace Ev3Dev.CSharp.EvA
         /// <param name="target">Object-owner of the action</param>
         /// <param name="method"><see cref="MethodInfo"/> object representing action</param>
         /// <param name="reenterable">Returns if action is defined as reenterable</param>
-        /// <returns><see cref="Action"/> object to perform the action</returns>
-        private static Action GetAsyncMethodAction( object target,
-                                                    MethodInfo method,
-                                                    out bool reenterable )
+        /// <returns><see cref="Func{Task}"/> object to perform the action</returns>
+        private static Func<Task> GetAsyncMethodAction( object target,
+                                                        MethodInfo method,
+                                                        out bool reenterable )
         {
             if ( method.ReturnType != typeof( Task ) )
             {
@@ -289,7 +324,8 @@ namespace Ev3Dev.CSharp.EvA
                                                                     method.Name ) );
             }
 
-            if ( method.GetCustomAttribute<EventHandlerAttribute>( ) != null )
+            if ( method.GetCustomAttribute<EventHandlerAttribute>( ) != null
+                 && method.GetCustomAttribute<ActionAttribute>( ) != null )
             {
                 throw new InvalidOperationException( string.Format( Resources.ActionCantBeHandler,
                                                                     method.Name ) );
@@ -346,11 +382,11 @@ namespace Ev3Dev.CSharp.EvA
                                                    nonReenterable.DiscardRepeated );
             }
 
-            Action performAction = ( ) =>
+            Func<Task> performAction = ( ) =>
             {
                 var argumentsArray = ( from getter in parameterGetters
                                        select getter( ) ).ToArray( );
-                callAction( argumentsArray );
+                return callAction( argumentsArray );
             };
 
             return performAction;
