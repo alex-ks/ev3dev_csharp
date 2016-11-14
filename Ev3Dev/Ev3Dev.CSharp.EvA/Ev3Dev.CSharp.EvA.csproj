@@ -7,8 +7,8 @@
     <ProjectGuid>{873FBF26-2436-4383-8596-139B8DF973BF}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Ev3Dev.CSharp.ControlFlow</RootNamespace>
-    <AssemblyName>Ev3Dev.CSharp.ControlFlow</AssemblyName>
+    <RootNamespace>Ev3Dev.CSharp.EvA</RootNamespace>
+    <AssemblyName>Ev3Dev.CSharp.EvA</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ev3Dev.CSharp.BasicDevices"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ev3Dev.CSharp.Demos", "Ev3Dev.CSharp.Demos\Ev3Dev.CSharp.Demos.csproj", "{45D6F646-AE69-42C4-AF6E-BE503C0C7E8B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ev3Dev.CSharp.EventApi", "Ev3Dev.CSharp.ControlFlow\Ev3Dev.CSharp.EventApi.csproj", "{873FBF26-2436-4383-8596-139B8DF973BF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ev3Dev.CSharp.EvA", "Ev3Dev.CSharp.EvA\Ev3Dev.CSharp.EvA.csproj", "{873FBF26-2436-4383-8596-139B8DF973BF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
