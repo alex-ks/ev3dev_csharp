@@ -418,34 +418,44 @@ namespace Ev3Dev.CSharp.EvA
             Action<object[]> callAction;
 
             if ( parameterGetters.Count == 0 )
-            { callAction = ( args ) => ReflectionToDelegateConverter.CreateActionZeroArg( target, method ); }
+            {
+                var convertedAct = ReflectionToDelegateConverter.CreateActionZeroArg( target, method );
+                callAction = ( args ) => convertedAct( );
+            }
             else if ( parameterGetters.Count == 1 )
-            { callAction = ( args ) => ReflectionToDelegateConverter.CreateAction1Arg( target, method )( args[0] ); }
+            {
+                var convertedAct = ReflectionToDelegateConverter.CreateAction1Arg( target, method );
+                callAction = ( args ) => convertedAct( args[0] );
+            }
             else if ( parameterGetters.Count == 2 )
             {
-                callAction = ( args ) => ReflectionToDelegateConverter.CreateAction2Args( target, method )( args[0],
-                                                                                                            args[1] );
+                var convertedAct = ReflectionToDelegateConverter.CreateAction2Args( target, method );
+                callAction = ( args ) => convertedAct( args[0],
+                                                       args[1] );
             }
             else if ( parameterGetters.Count == 3 )
             {
-                callAction = ( args ) => ReflectionToDelegateConverter.CreateAction3Args( target, method )( args[0],
-                                                                                                            args[1],
-                                                                                                            args[2] );
+                var convertedAct = ReflectionToDelegateConverter.CreateAction3Args( target, method );
+                callAction = ( args ) => convertedAct( args[0],
+                                                       args[1],
+                                                       args[2] );
             }
             else if ( parameterGetters.Count == 4 )
             {
-                callAction = ( args ) => ReflectionToDelegateConverter.CreateAction4Args( target, method )( args[0],
-                                                                                                            args[1],
-                                                                                                            args[2],
-                                                                                                            args[3] );
+                var convertedAct = ReflectionToDelegateConverter.CreateAction4Args( target, method );
+                callAction = ( args ) => convertedAct( args[0],
+                                                       args[1],
+                                                       args[2],
+                                                       args[3] );
             }
             else if ( parameterGetters.Count == 5 )
             {
-                callAction = ( args ) => ReflectionToDelegateConverter.CreateAction5Args( target, method )( args[0],
-                                                                                                            args[1],
-                                                                                                            args[2],
-                                                                                                            args[3],
-                                                                                                            args[4] );
+                var convertedAct = ReflectionToDelegateConverter.CreateAction5Args( target, method );
+                callAction = ( args ) => convertedAct( args[0],
+                                                       args[1],
+                                                       args[2],
+                                                       args[3],
+                                                       args[4] );
             }
             else
             { callAction = ( args ) => method.Invoke( target, args ); }
@@ -500,46 +510,49 @@ namespace Ev3Dev.CSharp.EvA
             Func<object[], Task> callAction;
 
             if ( parameterGetters.Count == 0 )
-            { callAction = ( args ) => ReflectionToDelegateConverter.CreateFuncZeroArg( target, method )( ) as Task; }
+            {
+                var convertedFunc = ReflectionToDelegateConverter.CreateFuncZeroArg( target, method );
+                callAction = ( args ) => convertedFunc( ) as Task;
+            }
             else if ( parameterGetters.Count == 1 )
             { callAction = ( args ) => 
                 ReflectionToDelegateConverter.CreateFunc1Arg( target, method )( args[0] ) as Task; }
             else if ( parameterGetters.Count == 2 )
             {
-                callAction = ( args ) => 
-                    ReflectionToDelegateConverter.CreateFunc2Args( target, method )( args[0],
-                                                                                     args[1] ) as Task;
+                var convertedFunc = ReflectionToDelegateConverter.CreateFunc2Args( target, method );
+                callAction = ( args ) => convertedFunc( args[0],
+                                                        args[1] ) as Task;
             }
             else if ( parameterGetters.Count == 3 )
             {
-                callAction = ( args ) => 
-                    ReflectionToDelegateConverter.CreateFunc3Args( target, method )( args[0],
-                                                                                     args[1],
-                                                                                     args[2] ) as Task;
+                var convertedFunc = ReflectionToDelegateConverter.CreateFunc3Args( target, method );
+                callAction = ( args ) => convertedFunc( args[0],
+                                                        args[1],
+                                                        args[2] ) as Task;
             }
             else if ( parameterGetters.Count == 4 )
             {
-                callAction = ( args ) => 
-                    ReflectionToDelegateConverter.CreateFunc4Args( target, method )( args[0],
-                                                                                     args[1],
-                                                                                     args[2],
-                                                                                     args[3] ) as Task;
+                var convertedFunc = ReflectionToDelegateConverter.CreateFunc4Args( target, method );
+                callAction = ( args ) => convertedFunc( args[0],
+                                                        args[1],
+                                                        args[2],
+                                                        args[3] ) as Task;
             }
             else if ( parameterGetters.Count == 5 )
             {
-                callAction = ( args ) => 
-                    ReflectionToDelegateConverter.CreateFunc5Args( target, method )( args[0],
-                                                                                     args[1],
-                                                                                     args[2],
-                                                                                     args[3],
-                                                                                     args[4] ) as Task;
+                var convertedFunc = ReflectionToDelegateConverter.CreateFunc5Args( target, method );
+                callAction = ( args ) => convertedFunc( args[0],
+                                                        args[1],
+                                                        args[2],
+                                                        args[3],
+                                                        args[4] ) as Task;
             }
             else
             { callAction = ( args ) => method.Invoke( target, args ) as Task; }
 
             if ( nonReenterable != null )
             {
-                callAction = MakeAsyncReenterable( ( args ) => method.Invoke( target, args ) as Task,
+                callAction = MakeAsyncReenterable( callAction,
                                                    nonReenterable.DiscardRepeated );
             }
 
