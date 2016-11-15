@@ -124,6 +124,15 @@ namespace Ev3Dev.CSharp.EvA {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Method {0} must be marked as non-reenterable to take part in mutual exclusion.
+        /// </summary>
+        internal static string NotNonReenterableMethod {
+            get {
+                return ResourceManager.GetString("NotNonReenterableMethod", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Source {0} not found for parameter {1} of action {2}.
         /// </summary>
         internal static string SourceNotFound {

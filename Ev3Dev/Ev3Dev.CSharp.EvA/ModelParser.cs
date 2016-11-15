@@ -164,7 +164,168 @@ namespace Ev3Dev.CSharp.EvA
                 }
             }
 
-            //todo: implement mutual exclusion
+            // create mutual exclusions
+            var exclusionAttributes = type.GetCustomAttributes<MutualExclusionAttribute>( );
+
+            //todo: check if any need to discard methods at mutual exclusion
+            foreach ( var exclusion in exclusionAttributes )
+            {
+                var exclusionGuard = new object( );
+                bool locked = false;
+                foreach ( var methodName in exclusion.Methods )
+                {
+                    #region Guarded function templates
+                    Func<Func<Task>, Task> nonDiscardingTemplateAsync = async method =>
+                    {
+                        lock ( exclusionGuard )
+                        {
+                            while ( locked )
+                            { Monitor.Wait( exclusionGuard ); }
+                            locked = true;
+                        }
+                        await method( );
+                        lock ( exclusionGuard )
+                        {
+                            locked = false;
+                            Monitor.Pulse( exclusionGuard );
+                        }
+                    };
+
+                    Func<Func<Task>, Task> discardingTemplateAsync = async method =>
+                    {
+                        lock ( exclusionGuard )
+                        {
+                            if ( locked )
+                            { return; }
+                            locked = true;
+                        }
+                        await method( );
+                        lock ( exclusionGuard )
+                        {
+                            locked = false;
+                            Monitor.Pulse( exclusionGuard );
+                        }
+                    };
+
+                    Action<Action> nonDiscardingTemplate = method =>
+                    {
+                        lock ( exclusionGuard )
+                        {
+                            while ( locked )
+                            { Monitor.Wait( exclusionGuard ); }
+                            method( );
+                            Monitor.Pulse( exclusionGuard );
+                        }
+                    };
+
+                    Action<Action> discardingTemplate = method =>
+                    {
+                        lock ( exclusionGuard )
+                        {
+                            if ( locked )
+                            { return; }
+                            method( );
+                            Monitor.Pulse( exclusionGuard );
+                        }
+                    };
+                    #endregion Guarded function templates
+
+                    if ( nonReenterableAsyncs.ContainsKey( methodName ) )
+                    {
+                        var method = nonReenterableAsyncs[methodName];
+                        Func<Task> guardedMethod;
+
+                        if ( exclusion.DiscardExcluded )
+                        { guardedMethod = ( ) => discardingTemplateAsync( method ); }
+                        else
+                        { guardedMethod = ( ) => nonDiscardingTemplateAsync( method ); }
+
+                        nonReenterableAsyncs[methodName] = guardedMethod;
+                    }
+                    else if ( nonReenterableEventAsyncs.ContainsKey( methodName ) )
+                    {
+                        var pair = nonReenterableEventAsyncs[methodName];
+                        var method = pair.Item2;
+                        Func<Task> guardedMethod;
+
+                        if ( exclusion.DiscardExcluded )
+                        { guardedMethod = ( ) => discardingTemplateAsync( method ); }
+                        else
+                        { guardedMethod = ( ) => nonDiscardingTemplateAsync( method ); }
+
+                        nonReenterableEventAsyncs[methodName] = 
+                            new Tuple<Func<bool>, Func<Task>>( pair.Item1, guardedMethod );
+                    }
+                    else if ( nonReenterableMethods.ContainsKey( methodName ) )
+                    {
+                        var method = nonReenterableMethods[methodName];
+                        Action guardedMethod;
+
+                        if ( exclusion.DiscardExcluded )
+                        { guardedMethod = ( ) => discardingTemplate( method ); }
+                        else
+                        { guardedMethod = ( ) => nonDiscardingTemplate( method ); }
+
+                        nonReenterableMethods[methodName] = guardedMethod;
+                    }
+                    else if ( nonReenterableEventHandlers.ContainsKey( methodName ) )
+                    {
+                        var pair = nonReenterableEventHandlers[methodName];
+                        var method = pair.Item2;
+                        Action guardedMethod;
+
+                        if ( exclusion.DiscardExcluded )
+                        { guardedMethod = ( ) => discardingTemplate( method ); }
+                        else
+                        { guardedMethod = ( ) => nonDiscardingTemplate( method ); }
+
+                        nonReenterableEventHandlers[methodName] = 
+                            new Tuple<Func<bool>, Action>( pair.Item1, guardedMethod );
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException( string.Format( Resources.NotNonReenterableMethod,
+                                                                            methodName ) );
+                    }
+                }
+            }
+
+            //registering generated actions and events
+
+            foreach ( var shutdownEvent in eventsToAdd )
+            {
+                loop.RegisterShutdownEvent( shutdownEvent );
+            }
+
+            foreach ( var action in actionsToAdd )
+            {
+                loop.RegisterAction( action );
+            }
+
+            foreach ( var eventHandler in eventHandlersToAdd )
+            {
+                loop.RegisterEvent( eventHandler.Item1, eventHandler.Item2 );
+            }
+
+            foreach ( var action in nonReenterableMethods )
+            {
+                loop.RegisterAction( action.Value );
+            }
+
+            foreach ( var asyncAction in nonReenterableAsyncs )
+            {
+                loop.RegisterAction( ( ) => asyncAction.Value( ) );
+            }
+
+            foreach ( var eventHandler in nonReenterableEventHandlers )
+            {
+                loop.RegisterEvent( eventHandler.Value.Item1, eventHandler.Value.Item2 );
+            }
+
+            foreach ( var asyncHandler in nonReenterableEventAsyncs )
+            {
+                loop.RegisterEvent( asyncHandler.Value.Item1, ( ) => asyncHandler.Value.Item2( ) );
+            }
         }
 
         private static Func<T> CreateGetter<T>( object target, PropertyInfo property )
@@ -222,7 +383,7 @@ namespace Ev3Dev.CSharp.EvA
 
             return parameterGetters;
         }
-
+      
         /// <summary>
         /// Creates method performing model action to call in event loop.
         /// Performs optimizations for actions with parameters count less or equal 5 - 

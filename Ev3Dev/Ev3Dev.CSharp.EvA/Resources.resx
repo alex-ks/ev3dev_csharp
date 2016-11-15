@@ -138,6 +138,9 @@
   <data name="NoParameterSource" xml:space="preserve">
     <value>Action parameter {0} of action {1} does not have source</value>
   </data>
+  <data name="NotNonReenterableMethod" xml:space="preserve">
+    <value>Method {0} must be marked as non-reenterable to take part in mutual exclusion</value>
+  </data>
   <data name="SourceNotFound" xml:space="preserve">
     <value>Source {0} not found for parameter {1} of action {2}</value>
   </data>

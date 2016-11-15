@@ -11,6 +11,12 @@ namespace Ev3Dev.CSharp.EvA
     {
         public string[] Methods { get; }
 
+        /// <summary>
+        /// Indicates whether to discard action or event handler if 
+        /// one of the mutexed methods is running.
+        /// </summary>
+        public bool DiscardExcluded { get; set; } = false;
+
         public MutualExclusionAttribute( params string[] methods )
         {
             Methods = methods;
