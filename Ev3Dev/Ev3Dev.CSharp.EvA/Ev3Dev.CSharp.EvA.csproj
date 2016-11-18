@@ -55,6 +55,7 @@
     </Compile>
     <Compile Include="ShutdownEventAttribute.cs" />
     <Compile Include="NonReenterableAttribute.cs" />
+    <Compile Include="SwitchAttribute.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources.resx">
