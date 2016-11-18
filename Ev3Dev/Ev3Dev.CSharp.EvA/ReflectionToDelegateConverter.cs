@@ -27,7 +27,7 @@ namespace Ev3Dev.CSharp.EvA
             { throw new ArgumentException( string.Format( Resources.WrongParamsCount, "zero" ) ); }
 
             var genericCreator = typeof( ReflectionToDelegateConverter ).GetMethod( nameof( CreateFuncZeroArgGeneric ),
-                                                                                    BindingFlags.NonPublic );
+                                                                                    BindingFlags.Static | BindingFlags.NonPublic );
             var correctCreator = genericCreator.MakeGenericMethod( method.ReturnType );
             return correctCreator.Invoke( null, new[] { target, method } ) as Func<object>;
         }
@@ -44,7 +44,7 @@ namespace Ev3Dev.CSharp.EvA
             { throw new ArgumentException( string.Format( Resources.WrongParamsCount, 1 ) ); }
 
             var genericCreator = typeof( ReflectionToDelegateConverter ).GetMethod( nameof( CreateFunc1ArgGeneric ), 
-                                                                                    BindingFlags.NonPublic );
+                                                                                    BindingFlags.Static | BindingFlags.NonPublic );
             var correctCreator = genericCreator.MakeGenericMethod( method.GetParameters( )[0].ParameterType,
                                                                    method.ReturnType );
             return correctCreator.Invoke( null, new[] { target, method } ) as Func<object, object>;
@@ -66,7 +66,7 @@ namespace Ev3Dev.CSharp.EvA
             { throw new ArgumentException( string.Format( Resources.WrongParamsCount, 2 ) ); }
 
             var genericCreator = typeof( ReflectionToDelegateConverter ).GetMethod( nameof( CreateFunc2ArgsGeneric ),
-                                                                                    BindingFlags.NonPublic );
+                                                                                    BindingFlags.Static | BindingFlags.NonPublic );
             var correctCreator = genericCreator.MakeGenericMethod( method.GetParameters( )[0].ParameterType,
                                                                    method.GetParameters( )[1].ParameterType,
                                                                    method.ReturnType );
@@ -89,7 +89,7 @@ namespace Ev3Dev.CSharp.EvA
             { throw new ArgumentException( string.Format( Resources.WrongParamsCount, 3 ) ); }
 
             var genericCreator = typeof( ReflectionToDelegateConverter ).GetMethod( nameof( CreateFunc3ArgsGeneric ),
-                                                                                    BindingFlags.NonPublic );
+                                                                                    BindingFlags.Static | BindingFlags.NonPublic );
             var correctCreator = genericCreator.MakeGenericMethod( method.GetParameters( )[0].ParameterType,
                                                                    method.GetParameters( )[1].ParameterType,
                                                                    method.GetParameters( )[2].ParameterType,
@@ -113,7 +113,7 @@ namespace Ev3Dev.CSharp.EvA
             { throw new ArgumentException( string.Format( Resources.WrongParamsCount, 4 ) ); }
 
             var genericCreator = typeof( ReflectionToDelegateConverter ).GetMethod( nameof( CreateFunc4ArgsGeneric ),
-                                                                                    BindingFlags.NonPublic );
+                                                                                    BindingFlags.Static | BindingFlags.NonPublic );
             var correctCreator = genericCreator.MakeGenericMethod( method.GetParameters( )[0].ParameterType,
                                                                    method.GetParameters( )[1].ParameterType,
                                                                    method.GetParameters( )[2].ParameterType,
@@ -144,7 +144,7 @@ namespace Ev3Dev.CSharp.EvA
             { throw new ArgumentException( string.Format( Resources.WrongParamsCount, 5 ) ); }
 
             var genericCreator = typeof( ReflectionToDelegateConverter ).GetMethod( nameof( CreateFunc5ArgsGeneric ),
-                                                                                    BindingFlags.NonPublic );
+                                                                                    BindingFlags.Static | BindingFlags.NonPublic );
             var correctCreator = genericCreator.MakeGenericMethod( method.GetParameters( )[0].ParameterType,
                                                                    method.GetParameters( )[1].ParameterType,
                                                                    method.GetParameters( )[2].ParameterType,
@@ -176,7 +176,7 @@ namespace Ev3Dev.CSharp.EvA
             { throw new ArgumentException( string.Format( Resources.WrongParamsCount, 1 ) ); }
 
             var genericCreator = typeof( ReflectionToDelegateConverter ).GetMethod( nameof( CreateAction1ArgGeneric ),
-                                                                                    BindingFlags.NonPublic );
+                                                                                    BindingFlags.Static | BindingFlags.NonPublic );
             var correctCreator = genericCreator.MakeGenericMethod( method.GetParameters( )[0].ParameterType );
             return correctCreator.Invoke( null, new[] { target, method } ) as Action<object>;
         }
@@ -197,7 +197,7 @@ namespace Ev3Dev.CSharp.EvA
             { throw new ArgumentException( string.Format( Resources.WrongParamsCount, 2 ) ); }
 
             var genericCreator = typeof( ReflectionToDelegateConverter ).GetMethod( nameof( CreateAction2ArgsGeneric ),
-                                                                                    BindingFlags.NonPublic );
+                                                                                    BindingFlags.Static | BindingFlags.NonPublic );
             var correctCreator = genericCreator.MakeGenericMethod( method.GetParameters( )[0].ParameterType,
                                                                    method.GetParameters( )[1].ParameterType );
             return correctCreator.Invoke( null, new[] { target, method } ) as Action<object, object>;
@@ -219,7 +219,7 @@ namespace Ev3Dev.CSharp.EvA
             { throw new ArgumentException( string.Format( Resources.WrongParamsCount, 3 ) ); }
 
             var genericCreator = typeof( ReflectionToDelegateConverter ).GetMethod( nameof( CreateAction3ArgsGeneric ),
-                                                                                    BindingFlags.NonPublic );
+                                                                                    BindingFlags.Static | BindingFlags.NonPublic );
             var correctCreator = genericCreator.MakeGenericMethod( method.GetParameters( )[0].ParameterType,
                                                                    method.GetParameters( )[1].ParameterType,
                                                                    method.GetParameters( )[2].ParameterType );
@@ -242,7 +242,7 @@ namespace Ev3Dev.CSharp.EvA
             { throw new ArgumentException( string.Format( Resources.WrongParamsCount, 4 ) ); }
 
             var genericCreator = typeof( ReflectionToDelegateConverter ).GetMethod( nameof( CreateAction4ArgsGeneric ),
-                                                                                    BindingFlags.NonPublic );
+                                                                                    BindingFlags.Static | BindingFlags.NonPublic );
             var correctCreator = genericCreator.MakeGenericMethod( method.GetParameters( )[0].ParameterType,
                                                                    method.GetParameters( )[1].ParameterType,
                                                                    method.GetParameters( )[2].ParameterType,
@@ -272,7 +272,7 @@ namespace Ev3Dev.CSharp.EvA
             { throw new ArgumentException( string.Format( Resources.WrongParamsCount, 5 ) ); }
 
             var genericCreator = typeof( ReflectionToDelegateConverter ).GetMethod( nameof( CreateAction5ArgsGeneric ),
-                                                                                    BindingFlags.NonPublic );
+                                                                                    BindingFlags.Static | BindingFlags.NonPublic );
             var correctCreator = genericCreator.MakeGenericMethod( method.GetParameters( )[0].ParameterType,
                                                                    method.GetParameters( )[1].ParameterType,
                                                                    method.GetParameters( )[2].ParameterType,

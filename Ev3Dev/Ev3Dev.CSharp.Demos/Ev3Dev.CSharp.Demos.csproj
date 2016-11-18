@@ -50,10 +50,11 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject>Ev3Dev.CSharp.Demos.SoundDemo</StartupObject>
+    <StartupObject>Ev3Dev.CSharp.Demos.EvaDemo</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="ColorSensorDemo.cs" />
+    <Compile Include="EvaDemo.cs" />
     <Compile Include="GyroSensorDemo.cs" />
     <Compile Include="InfraredSensorDemo.cs" />
     <Compile Include="MotorDemo.cs" />
@@ -68,6 +69,10 @@
     <ProjectReference Include="..\Ev3Dev.CSharp.BasicDevices\Ev3Dev.CSharp.BasicDevices.csproj">
       <Project>{aedcd58c-aefe-4c33-ba20-32cecbb686bd}</Project>
       <Name>Ev3Dev.CSharp.BasicDevices</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ev3Dev.CSharp.EvA\Ev3Dev.CSharp.EvA.csproj">
+      <Project>{873fbf26-2436-4383-8596-139b8df973bf}</Project>
+      <Name>Ev3Dev.CSharp.EvA</Name>
     </ProjectReference>
     <ProjectReference Include="..\Ev3Dev.CSharp\Ev3Dev.CSharp.csproj">
       <Project>{e573fbda-25aa-4e72-8d29-9872f42c80f6}</Project>

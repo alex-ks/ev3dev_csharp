@@ -13,9 +13,9 @@ namespace Ev3Dev.CSharp.EvA
 
         /// <summary>
         /// Indicates whether to discard action or event handler if 
-        /// one of the mutexed methods is running.
+        /// one of the mutexed methods is running. True by default.
         /// </summary>
-        public bool DiscardExcluded { get; set; } = false;
+        public bool DiscardExcluded { get; set; } = true;
 
         public MutualExclusionAttribute( params string[] methods )
         {

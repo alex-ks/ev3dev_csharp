@@ -12,9 +12,9 @@ namespace Ev3Dev.CSharp.EvA
         private Dictionary<Func<bool>, Action> _eventHandlers =
             new Dictionary<Func<bool>, Action>( );
 
-        private SortedSet<Action> _actions = new SortedSet<Action>( );
+        private List<Action> _actions = new List<Action>( );
 
-        private SortedSet<Func<bool>> _shutdownEvents = new SortedSet<Func<bool>>( );
+        private List<Func<bool>> _shutdownEvents = new List<Func<bool>>( );
 
         public void RegisterEvent( Func<bool> trigger, Action handler )
         {
@@ -63,7 +63,7 @@ namespace Ev3Dev.CSharp.EvA
             shutdown = false;
         }
 
-        public void StartLoop( int millisecondsCooldown = 0 )
+        public void Start( int millisecondsCooldown = 0 )
         {
             bool needToShutdown = false;
             while ( !needToShutdown )
@@ -75,7 +75,7 @@ namespace Ev3Dev.CSharp.EvA
             }
         }
 
-        public void StartLoop( TimeSpan cooldown )
+        public void Start( TimeSpan cooldown )
         {
             bool needToShutdown = false;
             while ( !needToShutdown )

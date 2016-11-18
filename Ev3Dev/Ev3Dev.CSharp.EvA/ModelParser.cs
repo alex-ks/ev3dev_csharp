@@ -21,6 +21,40 @@ namespace Ev3Dev.CSharp.EvA
         {
             var type = model.GetType( );
 
+            var switches = new Dictionary<string, Func<bool>>( );
+
+            var switchCandidates = from prop in type.GetProperties( )
+                                   let attribute = prop.GetCustomAttribute<SwitchAttribute>( )
+                                   where attribute != null
+                                   select prop;
+
+            foreach ( var prop in switchCandidates )
+            {
+                if ( prop.PropertyType == typeof( bool ) )
+                {
+                    throw new InvalidOperationException( string.Format( Resources.AmbiguousPropertyUse,
+                                                                        prop.Name ) );
+                }
+
+                var getter = CreateGetter( model, prop );
+                object cache = null;
+                bool started = true;
+                Func<bool> switchGetter = ( ) =>
+                {
+                    var obj = getter( );
+                    if ( started )
+                    {
+                        started = false;
+                        return false;
+                    }
+                    var result = !Equals( obj, cache );
+                    if ( result )
+                    { cache = obj; }
+                    return result;
+                };
+                switches.Add( prop.Name, switchGetter );
+            }
+
             var shutdownEvents = from prop in type.GetProperties( )
                                  let attribute = prop.GetCustomAttribute<ShutdownEventAttribute>( )
                                  where attribute != null
@@ -31,10 +65,15 @@ namespace Ev3Dev.CSharp.EvA
             // parse events that will cause loop shutdown
             foreach ( var prop in shutdownEvents )
             {
-                if ( prop.PropertyType != typeof( bool ) )
+                Func<bool> shutdownEvent = null;
+                if ( prop.PropertyType == typeof( bool ) )
+                { shutdownEvent = CreateGetter<bool>( model, prop ); }
+                if ( switches.ContainsKey( prop.Name ) )
+                { shutdownEvent = switches[prop.Name]; }
+
+                if ( shutdownEvent == null )
                 { throw new InvalidOperationException( Resources.InvalidShutdownEvent ); }
 
-                var shutdownEvent = CreateGetter<bool>( model, prop );
                 eventsToAdd.Add( shutdownEvent );
             }
 
@@ -98,17 +137,22 @@ namespace Ev3Dev.CSharp.EvA
                 // get trigger flags
                 foreach ( var trigger in eventHandler.Attribute.Triggers )
                 {
-                    try
-                    {
-                        var triggerFunc = CreateGetter<bool>( model, type.GetProperty( trigger ) );
-                        triggers.Add( triggerFunc );
-                    }
-                    catch ( ArgumentException )
+                    var prop = type.GetProperty( trigger );
+                    Func<bool> triggerFunc = null;
+                        
+                    if ( prop.PropertyType == typeof( bool ) )
+                    { triggerFunc = CreateGetter<bool>( model, type.GetProperty( trigger ) ); }
+                    if ( switches.ContainsKey( trigger ) )
+                    { triggerFunc = switches[trigger]; }
+
+                    if ( triggerFunc == null )
                     {
                         throw new InvalidOperationException( string.Format( Resources.InvalidEventTrigger,
                                                                             trigger,
                                                                             method.Name ) );
                     }
+
+                    triggers.Add( triggerFunc );
                 }
 
                 Func<bool, bool, bool> compositionFunc;

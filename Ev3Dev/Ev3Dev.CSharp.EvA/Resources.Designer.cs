@@ -70,6 +70,15 @@ namespace Ev3Dev.CSharp.EvA {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Using switch on bool property {0} is ambiguous.
+        /// </summary>
+        internal static string AmbiguousPropertyUse {
+            get {
+                return ResourceManager.GetString("AmbiguousPropertyUse", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Action {0} must be void.
         /// </summary>
         internal static string InvalidAction {

@@ -120,6 +120,9 @@
   <data name="ActionCantBeHandler" xml:space="preserve">
     <value>{0} cant be action and event handler at one time</value>
   </data>
+  <data name="AmbiguousPropertyUse" xml:space="preserve">
+    <value>Using switch on bool property {0} is ambiguous</value>
+  </data>
   <data name="InvalidAction" xml:space="preserve">
     <value>Action {0} must be void</value>
   </data>
