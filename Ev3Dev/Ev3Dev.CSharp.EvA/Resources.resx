@@ -141,6 +141,9 @@
   <data name="NoParameterSource" xml:space="preserve">
     <value>Action parameter {0} of action {1} does not have source</value>
   </data>
+  <data name="NoShutdownEvent" xml:space="preserve">
+    <value>There is no shutdown event specified. Set parameter allowEndless to true to allow execution without shutdown events.</value>
+  </data>
   <data name="NotNonReenterableMethod" xml:space="preserve">
     <value>Method {0} must be marked as non-reenterable to take part in mutual exclusion</value>
   </data>

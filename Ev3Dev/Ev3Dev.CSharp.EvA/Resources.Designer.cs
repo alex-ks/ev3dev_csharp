@@ -133,6 +133,15 @@ namespace Ev3Dev.CSharp.EvA {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to There is no shutdown event specified. Set parameter allowEndless to true to allow execution without shutdown events..
+        /// </summary>
+        internal static string NoShutdownEvent {
+            get {
+                return ResourceManager.GetString("NoShutdownEvent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Method {0} must be marked as non-reenterable to take part in mutual exclusion.
         /// </summary>
         internal static string NotNonReenterableMethod {

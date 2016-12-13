@@ -17,9 +17,35 @@ namespace Ev3Dev.CSharp.EvA
             public Action Handler { get; set; }
         }
 
-        public static void RegisterModel( this EventLoop loop, object model )
+        private struct OrderedAction
+        {
+            public Action Action { get; }
+            public int Priority { get; }
+
+            public OrderedAction( Action action, int priority )
+            {
+                Action = action;
+                Priority = priority;
+            }
+        }
+
+        private struct OrderedFunc<T>
+        {
+            public Func<T> Func { get; }
+            public int Priority { get; }
+
+            public OrderedFunc( Func<T> func, int priority )
+            {
+                Func = func;
+                Priority = priority;
+            }
+        }
+
+        public static void RegisterModel( this EventLoop loop, object model, bool allowEndless = false )
         {
             var type = model.GetType( );
+
+            // create events from switch properties
 
             var switches = new Dictionary<string, Func<bool>>( );
 
@@ -48,8 +74,7 @@ namespace Ev3Dev.CSharp.EvA
                         return false;
                     }
                     var result = !Equals( obj, cache );
-                    if ( result )
-                    { cache = obj; }
+                    cache = obj;
                     return result;
                 };
                 switches.Add( prop.Name, switchGetter );
@@ -60,7 +85,7 @@ namespace Ev3Dev.CSharp.EvA
                                  where attribute != null
                                  select prop;
 
-            var eventsToAdd = new List<Func<bool>>( );
+            var shutdownEventsToAdd = new List<Func<bool>>( );
 
             // parse events that will cause loop shutdown
             foreach ( var prop in shutdownEvents )
@@ -74,54 +99,71 @@ namespace Ev3Dev.CSharp.EvA
                 if ( shutdownEvent == null )
                 { throw new InvalidOperationException( Resources.InvalidShutdownEvent ); }
 
-                eventsToAdd.Add( shutdownEvent );
+                shutdownEventsToAdd.Add( shutdownEvent );
+            }
+
+            if ( !allowEndless && shutdownEventsToAdd.Count == 0 )
+            {
+                throw new InvalidOperationException( Resources.NoShutdownEvent );
             }
 
             // parse actions that will be performed on each iteration
             var actions = from method in type.GetMethods( )
                           let attribute = method.GetCustomAttribute<ActionAttribute>( )
+                          let priorityAttribute = method.GetCustomAttribute<PriorityAttribute>( )
                           where attribute != null
-                          select method;
+                          select new
+                          {
+                              Method = method,
+                              Priority = priorityAttribute?.Priority ?? int.MaxValue
+                          };
 
-            var actionsToAdd = new List<Action>( );
+            var actionsToAdd = new List<OrderedAction>( );
 
             // to keep actions that potentially need mutual exclusion
-            var nonReenterableMethods = new Dictionary<string, Action>( );
-            var nonReenterableAsyncs = new Dictionary<string, Func<Task>>( );
+            var nonReenterableMethods = new Dictionary<string, OrderedAction>( );
+            var nonReenterableAsyncs = new Dictionary<string, OrderedFunc<Task>>( );
 
-            foreach ( var method in actions )
+            foreach ( var pair in actions )
             {
                 bool reenterable;
+                var method = pair.Method;
 
                 if ( !IsAsync( method ) )
                 {
                     Action performAction = GetMethodAction( model, method, out reenterable );
                     if ( reenterable )
-                    { actionsToAdd.Add( performAction ); }
+                    { actionsToAdd.Add( new OrderedAction( performAction, pair.Priority ) ); }
                     else
-                    { nonReenterableMethods.Add( method.Name, performAction ); }
+                    { nonReenterableMethods.Add( method.Name, new OrderedAction( performAction, pair.Priority ) ); }
                 }
                 else
                 {
                     Func<Task> performAsync = GetAsyncMethodAction( model, method, out reenterable );
                     if ( reenterable )
-                    { actionsToAdd.Add( ( ) => performAsync( ) ); }
+                    { actionsToAdd.Add( new OrderedAction( ( ) => performAsync( ), pair.Priority ) ); }
                     else
-                    { nonReenterableAsyncs.Add( method.Name, performAsync ); }
+                    { nonReenterableAsyncs.Add( method.Name, new OrderedFunc<Task>( performAsync, pair.Priority ) ); }
                 }
             }
 
             // parse event handlers and their triggers
-            var eventHandlersToAdd = new List<Tuple<Func<bool>, Action>>( );
+            var eventHandlersToAdd = new List<Tuple<Func<bool>, OrderedAction>>( );
             
             // to keep handlers that potentially need mutual exclusion
-            var nonReenterableEventHandlers = new Dictionary<string, Tuple<Func<bool>, Action>>( );
-            var nonReenterableEventAsyncs = new Dictionary<string, Tuple<Func<bool>, Func<Task>>>( );
+            var nonReenterableEventHandlers = new Dictionary<string, Tuple<Func<bool>, OrderedAction>>( );
+            var nonReenterableEventAsyncs = new Dictionary<string, Tuple<Func<bool>, OrderedFunc<Task>>>( );
 
             var eventHandlers = from method in type.GetMethods( )
                                 let attribute = method.GetCustomAttribute<EventHandlerAttribute>( )
+                                let priorityAttribute = method.GetCustomAttribute<PriorityAttribute>( )
                                 where attribute != null
-                                select new { Method = method, Attribute = attribute };
+                                select new
+                                {
+                                    Method = method,
+                                    Attribute = attribute,
+                                    Priority = priorityAttribute?.Priority ?? int.MaxValue
+                                };
             
             foreach ( var eventHandler in eventHandlers )
             {
@@ -181,14 +223,18 @@ namespace Ev3Dev.CSharp.EvA
                     Action performAction = GetMethodAction( model, method, out reenterable );
                     if ( reenterable )
                     {
-                        eventHandlersToAdd.Add( new Tuple<Func<bool>, Action>( compositeTrigger,
-                                                                               performAction ) );
+                        eventHandlersToAdd
+                            .Add( new Tuple<Func<bool>, OrderedAction>( compositeTrigger,
+                                                                        new OrderedAction( performAction, 
+                                                                                           eventHandler.Priority ) ) );
                     }
                     else
                     {
-                        nonReenterableEventHandlers.Add( method.Name,
-                                                         new Tuple<Func<bool>, Action>( compositeTrigger,
-                                                                                        performAction ) );
+                        nonReenterableEventHandlers
+                            .Add( method.Name,
+                                  new Tuple<Func<bool>, OrderedAction>( compositeTrigger,
+                                                                        new OrderedAction( performAction,
+                                                                                           eventHandler.Priority ) ) );
                     }
                 }
                 else
@@ -196,14 +242,18 @@ namespace Ev3Dev.CSharp.EvA
                     Func<Task> performAsync = GetAsyncMethodAction( model, method, out reenterable );
                     if ( reenterable )
                     {
-                        eventHandlersToAdd.Add( new Tuple<Func<bool>, Action>( compositeTrigger,
-                                                                               ( ) => performAsync( ) ) );
+                        eventHandlersToAdd
+                            .Add( new Tuple<Func<bool>, OrderedAction>( compositeTrigger,
+                                                                        new OrderedAction( ( ) => performAsync( ),
+                                                                                           eventHandler.Priority ) ) );
                     }
                     else
                     {
-                        nonReenterableEventAsyncs.Add( method.Name,
-                                                       new Tuple<Func<bool>, Func<Task>>( compositeTrigger,
-                                                                                          performAsync ) );
+                        nonReenterableEventAsyncs
+                            .Add( method.Name,
+                                  new Tuple<Func<bool>, OrderedFunc<Task>>( compositeTrigger,
+                                                                            new OrderedFunc<Task>( performAsync,
+                                                                                                   eventHandler.Priority ) ) );
                     }
                 }
             }
@@ -280,11 +330,12 @@ namespace Ev3Dev.CSharp.EvA
                         Func<Task> guardedMethod;
 
                         if ( exclusion.DiscardExcluded )
-                        { guardedMethod = ( ) => discardingTemplateAsync( method ); }
+                        { guardedMethod = ( ) => discardingTemplateAsync( method.Func ); }
                         else
-                        { guardedMethod = ( ) => nonDiscardingTemplateAsync( method ); }
+                        { guardedMethod = ( ) => nonDiscardingTemplateAsync( method.Func ); }
 
-                        nonReenterableAsyncs[methodName] = guardedMethod;
+                        nonReenterableAsyncs[methodName] = new OrderedFunc<Task>( guardedMethod, 
+                                                                                  method.Priority );
                     }
                     else if ( nonReenterableEventAsyncs.ContainsKey( methodName ) )
                     {
@@ -293,12 +344,14 @@ namespace Ev3Dev.CSharp.EvA
                         Func<Task> guardedMethod;
 
                         if ( exclusion.DiscardExcluded )
-                        { guardedMethod = ( ) => discardingTemplateAsync( method ); }
+                        { guardedMethod = ( ) => discardingTemplateAsync( method.Func ); }
                         else
-                        { guardedMethod = ( ) => nonDiscardingTemplateAsync( method ); }
+                        { guardedMethod = ( ) => nonDiscardingTemplateAsync( method.Func ); }
 
                         nonReenterableEventAsyncs[methodName] = 
-                            new Tuple<Func<bool>, Func<Task>>( pair.Item1, guardedMethod );
+                            new Tuple<Func<bool>, OrderedFunc<Task>>( pair.Item1, 
+                                                                      new OrderedFunc<Task>( guardedMethod, 
+                                                                                             method.Priority ) );
                     }
                     else if ( nonReenterableMethods.ContainsKey( methodName ) )
                     {
@@ -306,11 +359,12 @@ namespace Ev3Dev.CSharp.EvA
                         Action guardedMethod;
 
                         if ( exclusion.DiscardExcluded )
-                        { guardedMethod = ( ) => discardingTemplate( method ); }
+                        { guardedMethod = ( ) => discardingTemplate( method.Action ); }
                         else
-                        { guardedMethod = ( ) => nonDiscardingTemplate( method ); }
+                        { guardedMethod = ( ) => nonDiscardingTemplate( method.Action ); }
 
-                        nonReenterableMethods[methodName] = guardedMethod;
+                        nonReenterableMethods[methodName] = new OrderedAction( guardedMethod,
+                                                                               method.Priority );
                     }
                     else if ( nonReenterableEventHandlers.ContainsKey( methodName ) )
                     {
@@ -319,12 +373,14 @@ namespace Ev3Dev.CSharp.EvA
                         Action guardedMethod;
 
                         if ( exclusion.DiscardExcluded )
-                        { guardedMethod = ( ) => discardingTemplate( method ); }
+                        { guardedMethod = ( ) => discardingTemplate( method.Action ); }
                         else
-                        { guardedMethod = ( ) => nonDiscardingTemplate( method ); }
+                        { guardedMethod = ( ) => nonDiscardingTemplate( method.Action ); }
 
                         nonReenterableEventHandlers[methodName] = 
-                            new Tuple<Func<bool>, Action>( pair.Item1, guardedMethod );
+                            new Tuple<Func<bool>, OrderedAction>( pair.Item1, 
+                                                                  new OrderedAction( guardedMethod, 
+                                                                                     method.Priority ) );
                     }
                     else
                     {
@@ -334,41 +390,33 @@ namespace Ev3Dev.CSharp.EvA
                 }
             }
 
-            //registering generated actions and events
+            // merging reenterable and guarded methods
 
-            foreach ( var shutdownEvent in eventsToAdd )
+            actionsToAdd.AddRange( nonReenterableMethods.Select( x => x.Value ) );
+            actionsToAdd.AddRange( nonReenterableAsyncs.Select( x => 
+                new OrderedAction( ( ) => x.Value.Func( ), x.Value.Priority ) ) );
+            eventHandlersToAdd.AddRange( nonReenterableEventHandlers.Select( x => x.Value ) );
+            eventHandlersToAdd.AddRange( nonReenterableEventAsyncs.Select( x =>
+                new Tuple<Func<bool>, OrderedAction>( x.Value.Item1,
+                                                      new OrderedAction( ( ) => x.Value.Item2.Func( ),
+                                                                         x.Value.Item2.Priority ) ) ) );
+
+            // registering generated actions and events
+
+            foreach ( var shutdownEvent in shutdownEventsToAdd )
             {
                 loop.RegisterShutdownEvent( shutdownEvent );
             }
 
-            foreach ( var action in actionsToAdd )
+            foreach ( var action in actionsToAdd.OrderByDescending( x => x.Priority )
+                                                .Select( x => x.Action ) )
             {
                 loop.RegisterAction( action );
             }
 
-            foreach ( var eventHandler in eventHandlersToAdd )
+            foreach ( var eventHandler in eventHandlersToAdd.OrderByDescending( x => x.Item2.Priority ) )
             {
-                loop.RegisterEvent( eventHandler.Item1, eventHandler.Item2 );
-            }
-
-            foreach ( var action in nonReenterableMethods )
-            {
-                loop.RegisterAction( action.Value );
-            }
-
-            foreach ( var asyncAction in nonReenterableAsyncs )
-            {
-                loop.RegisterAction( ( ) => asyncAction.Value( ) );
-            }
-
-            foreach ( var eventHandler in nonReenterableEventHandlers )
-            {
-                loop.RegisterEvent( eventHandler.Value.Item1, eventHandler.Value.Item2 );
-            }
-
-            foreach ( var asyncHandler in nonReenterableEventAsyncs )
-            {
-                loop.RegisterEvent( asyncHandler.Value.Item1, ( ) => asyncHandler.Value.Item2( ) );
+                loop.RegisterEvent( eventHandler.Item1, eventHandler.Item2.Action );
             }
         }
 
