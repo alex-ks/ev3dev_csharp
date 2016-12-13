@@ -17,30 +17,6 @@ namespace Ev3Dev.CSharp.EvA
             public Action Handler { get; set; }
         }
 
-        private struct OrderedAction
-        {
-            public Action Action { get; }
-            public int Priority { get; }
-
-            public OrderedAction( Action action, int priority )
-            {
-                Action = action;
-                Priority = priority;
-            }
-        }
-
-        private struct OrderedFunc<T>
-        {
-            public Func<T> Func { get; }
-            public int Priority { get; }
-
-            public OrderedFunc( Func<T> func, int priority )
-            {
-                Func = func;
-                Priority = priority;
-            }
-        }
-
         public static void RegisterModel( this EventLoop loop, object model, bool allowEndless = false )
         {
             var type = model.GetType( );
@@ -265,22 +241,31 @@ namespace Ev3Dev.CSharp.EvA
             foreach ( var exclusion in exclusionAttributes )
             {
                 var exclusionGuard = new object( );
-                bool locked = false;
+                //bool locked = false;
+                //string enteredName = null;
+                int exclusionCounter = 0;
+                int current = -1;
+
                 foreach ( var methodName in exclusion.Methods )
                 {
+                    // Using indexing to allow multiple entrance for the same method
+                    // This delegates repeating entrances handling to non-reenterable attribute
+                    int exclusionIndex = exclusionCounter++;
+
+                    // These templates define how mutual exclusion is handled for method
                     #region Guarded function templates
                     Func<Func<Task>, Task> nonDiscardingTemplateAsync = async method =>
                     {
                         lock ( exclusionGuard )
                         {
-                            while ( locked )
+                            while ( current != -1 && current != exclusionIndex )
                             { Monitor.Wait( exclusionGuard ); }
-                            locked = true;
+                            current = exclusionIndex;
                         }
                         await method( );
                         lock ( exclusionGuard )
                         {
-                            locked = false;
+                            current = -1;
                             Monitor.Pulse( exclusionGuard );
                         }
                     };
@@ -289,14 +274,14 @@ namespace Ev3Dev.CSharp.EvA
                     {
                         lock ( exclusionGuard )
                         {
-                            if ( locked )
+                            if ( current != -1 && current != exclusionIndex )
                             { return; }
-                            locked = true;
+                            current = exclusionIndex;
                         }
                         await method( );
                         lock ( exclusionGuard )
                         {
-                            locked = false;
+                            current = -1;
                             Monitor.Pulse( exclusionGuard );
                         }
                     };
@@ -305,7 +290,7 @@ namespace Ev3Dev.CSharp.EvA
                     {
                         lock ( exclusionGuard )
                         {
-                            while ( locked )
+                            while ( current != -1 )
                             { Monitor.Wait( exclusionGuard ); }
                             method( );
                             Monitor.Pulse( exclusionGuard );
@@ -316,7 +301,7 @@ namespace Ev3Dev.CSharp.EvA
                     {
                         lock ( exclusionGuard )
                         {
-                            if ( locked )
+                            if ( current != -1 )
                             { return; }
                             method( );
                             Monitor.Pulse( exclusionGuard );
@@ -395,6 +380,7 @@ namespace Ev3Dev.CSharp.EvA
             actionsToAdd.AddRange( nonReenterableMethods.Select( x => x.Value ) );
             actionsToAdd.AddRange( nonReenterableAsyncs.Select( x => 
                 new OrderedAction( ( ) => x.Value.Func( ), x.Value.Priority ) ) );
+
             eventHandlersToAdd.AddRange( nonReenterableEventHandlers.Select( x => x.Value ) );
             eventHandlersToAdd.AddRange( nonReenterableEventAsyncs.Select( x =>
                 new Tuple<Func<bool>, OrderedAction>( x.Value.Item1,
@@ -408,15 +394,16 @@ namespace Ev3Dev.CSharp.EvA
                 loop.RegisterShutdownEvent( shutdownEvent );
             }
 
-            foreach ( var action in actionsToAdd.OrderByDescending( x => x.Priority )
-                                                .Select( x => x.Action ) )
+            foreach ( var orderedAction in actionsToAdd )
             {
-                loop.RegisterAction( action );
+                loop.RegisterAction( orderedAction.Action, orderedAction.Priority );
             }
 
-            foreach ( var eventHandler in eventHandlersToAdd.OrderByDescending( x => x.Item2.Priority ) )
+            foreach ( var eventHandler in eventHandlersToAdd )
             {
-                loop.RegisterEvent( eventHandler.Item1, eventHandler.Item2.Action );
+                loop.RegisterEvent( eventHandler.Item1, 
+                                    eventHandler.Item2.Action, 
+                                    eventHandler.Item2.Priority );
             }
         }
 
@@ -509,6 +496,7 @@ namespace Ev3Dev.CSharp.EvA
 
             Action<object[]> callAction;
 
+            // create direct delegate invocation if argument count is small
             if ( parameterGetters.Count == 0 )
             {
                 var convertedAct = ReflectionToDelegateConverter.CreateActionZeroArg( target, method );
@@ -549,7 +537,7 @@ namespace Ev3Dev.CSharp.EvA
                                                        args[3],
                                                        args[4] );
             }
-            else
+            else // otherwise perform slow invocation through reflection
             { callAction = ( args ) => method.Invoke( target, args ); }
 
             if ( nonReenterable != null )
@@ -601,6 +589,7 @@ namespace Ev3Dev.CSharp.EvA
 
             Func<object[], Task> callAction;
 
+            // create direct delegate invocation if argument count is small
             if ( parameterGetters.Count == 0 )
             {
                 var convertedFunc = ReflectionToDelegateConverter.CreateFuncZeroArg( target, method );
@@ -639,7 +628,7 @@ namespace Ev3Dev.CSharp.EvA
                                                         args[3],
                                                         args[4] ) as Task;
             }
-            else
+            else // otherwise perform slow invocation through reflection
             { callAction = ( args ) => method.Invoke( target, args ) as Task; }
 
             if ( nonReenterable != null )

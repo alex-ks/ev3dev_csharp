@@ -46,6 +46,7 @@
     <Compile Include="FromSourceAttribute.cs" />
     <Compile Include="ModelParser.cs" />
     <Compile Include="MutualExclusionAttribute.cs" />
+    <Compile Include="OrderedAction.cs" />
     <Compile Include="PriorityAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReflectionToDelegateConverter.cs" />

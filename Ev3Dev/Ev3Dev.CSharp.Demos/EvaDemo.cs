@@ -9,9 +9,11 @@ using System.Threading.Tasks;
 
 namespace Ev3Dev.CSharp.Demos
 {
-    //[MutualExclusion( nameof( WriteFirstAsync ), nameof( WriteSecondAsync ) )]
+    [MutualExclusion( nameof( WriteFirstAsync ), nameof( WriteSecondAsync ) )]
     public class StreamWriterModel : IDisposable
     {
+        public const int WaitTime = 100;
+
         private StreamWriter writer;
         private int counter = 0;
         
@@ -27,22 +29,24 @@ namespace Ev3Dev.CSharp.Demos
         }
 
         [Action]
+        [Priority( 10 )]
         [NonReenterable( DiscardRepeated = false )]
         public async Task WriteFirstAsync( )
         {
             await writer.WriteLineAsync( "Hello, world" );
             await writer.FlushAsync( );
             ++ActivationCount;
-            Thread.Sleep( 100 );
+            Thread.Sleep( WaitTime );
         }
 
         [Action]
+        [Priority( 5 )]
         [NonReenterable]
         public async Task WriteSecondAsync( )
         {
             await writer.WriteLineAsync( "Hello, world 2" );
             await writer.FlushAsync( );
-            Thread.Sleep( 100 );
+            Thread.Sleep( WaitTime );
             return;
         }
 
@@ -73,8 +77,9 @@ namespace Ev3Dev.CSharp.Demos
             using ( var model = new StreamWriterModel( Console.OpenStandardOutput( ) ) )
             {
                 loop.RegisterModel( model );
-                loop.Start( );
-                Thread.Sleep( 1000 );
+                // If we make cooldown more than WaitTime, method with lower priority will never be called
+                loop.Start( millisecondsCooldown: StreamWriterModel.WaitTime + 20 );
+                Thread.Sleep( 2000 );
             }
         }
     }

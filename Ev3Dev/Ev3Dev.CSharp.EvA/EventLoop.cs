@@ -9,21 +9,21 @@ namespace Ev3Dev.CSharp.EvA
 {
     public class EventLoop
     {
-        private Dictionary<Func<bool>, Action> _eventHandlers =
-            new Dictionary<Func<bool>, Action>( );
+        private Dictionary<Func<bool>, OrderedAction> _eventHandlers =
+            new Dictionary<Func<bool>, OrderedAction>( );
 
-        private List<Action> _actions = new List<Action>( );
+        private List<OrderedAction> _actions = new List<OrderedAction>( );
 
         private List<Func<bool>> _shutdownEvents = new List<Func<bool>>( );
 
-        public void RegisterEvent( Func<bool> trigger, Action handler )
+        public void RegisterEvent( Func<bool> trigger, Action handler, int priority = int.MinValue )
         {
-            _eventHandlers.Add( trigger, handler );
+            _eventHandlers.Add( trigger, new OrderedAction( handler, priority ) );
         }
 
-        public void RegisterAction( Action action )
+        public void RegisterAction( Action action, int priority = int.MinValue )
         {
-            _actions.Add( action );
+            _actions.Add( new OrderedAction( action, priority ) );
         }
 
         public void RegisterShutdownEvent( Func<bool> sEvent )
@@ -38,37 +38,36 @@ namespace Ev3Dev.CSharp.EvA
             _actions.Clear( );
         }
 
-        private void PerformLoopIteration( out bool shutdown )
-        {
-            foreach ( var needToShutdown in _shutdownEvents )
-            {
-                if ( needToShutdown( ) )
-                {
-                    shutdown = true;
-                    return;
-                }
-            }
-
-            foreach ( var performAction in _actions )
-            {
-                performAction( );
-            }
-
-            foreach ( var eventPair in _eventHandlers )
-            {
-                if ( eventPair.Key( ) )
-                { eventPair.Value( ); }
-            }
-
-            shutdown = false;
-        }
-
         public void Start( int millisecondsCooldown = 0 )
         {
-            bool needToShutdown = false;
-            while ( !needToShutdown )
+            bool shutdown = false;
+
+            var eventCheckers = _eventHandlers.Select( x => new OrderedAction( ( ) =>
+                                                                               {
+                                                                                   if ( x.Key( ) )
+                                                                                   { x.Value.Action( ); }
+                                                                               }, 
+                                                                               x.Value.Priority ) );
+
+            var actionsToPerform = eventCheckers.Concat( _actions )
+                                                .OrderByDescending( x => x.Priority )
+                                                .Select( x => x.Action );
+            
+            while ( !shutdown )
             {
-                PerformLoopIteration( out needToShutdown );
+                foreach ( var needToShutdown in _shutdownEvents )
+                {
+                    if ( needToShutdown( ) )
+                    {
+                        shutdown = true;
+                        return;
+                    }
+                }
+
+                foreach ( var performAction in actionsToPerform )
+                {
+                    performAction( );
+                }
 
                 if ( millisecondsCooldown != 0 )
                 { Thread.Sleep( millisecondsCooldown ); }
@@ -77,14 +76,7 @@ namespace Ev3Dev.CSharp.EvA
 
         public void Start( TimeSpan cooldown )
         {
-            bool needToShutdown = false;
-            while ( !needToShutdown )
-            {
-                PerformLoopIteration( out needToShutdown );
-
-                if ( cooldown != TimeSpan.Zero )
-                { Thread.Sleep( cooldown ); }
-            }
+            Start( ( int )cooldown.TotalMilliseconds );
         }
     }
 }
