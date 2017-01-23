@@ -24,7 +24,7 @@ namespace Ev3Dev.CSharp.EvA
         public static Func<object> CreateFuncZeroArg( object target, MethodInfo method )
         {
             if ( method.GetParameters( ).Length != 0 )
-            { throw new ArgumentException( string.Format( Resources.WrongParamsCount, "zero" ) ); }
+            { throw new ArgumentException( string.Format( Resources.WrongParamsCount, "no" ) ); }
 
             var genericCreator = typeof( ReflectionToDelegateConverter ).GetMethod( nameof( CreateFuncZeroArgGeneric ),
                                                                                     BindingFlags.Static | BindingFlags.NonPublic );
@@ -32,6 +32,7 @@ namespace Ev3Dev.CSharp.EvA
             return correctCreator.Invoke( null, new[] { target, method } ) as Func<object>;
         }
 
+        // We can create delegate from reflection only if we know exact signature, so we use genereric method
         private static Func<object, object> CreateFunc1ArgGeneric<TArg, TRet>( object target, MethodInfo method )
         {
             var func = Delegate.CreateDelegate( typeof( Func<TArg, TRet> ), target, method ) as Func<TArg, TRet>;
@@ -45,11 +46,14 @@ namespace Ev3Dev.CSharp.EvA
 
             var genericCreator = typeof( ReflectionToDelegateConverter ).GetMethod( nameof( CreateFunc1ArgGeneric ), 
                                                                                     BindingFlags.Static | BindingFlags.NonPublic );
+            // getting parameters types and manually setting them to generic method
+            // now, at runtime types of parameters will be known and CreateFunc1ArgGeneric will successfully create delegate
             var correctCreator = genericCreator.MakeGenericMethod( method.GetParameters( )[0].ParameterType,
                                                                    method.ReturnType );
             return correctCreator.Invoke( null, new[] { target, method } ) as Func<object, object>;
         }
 
+        // same trick for all other methods
         private static Func<object, object, object> 
             CreateFunc2ArgsGeneric<TArg1, TArg2, TRet>( object target, 
                                                         MethodInfo method )

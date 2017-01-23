@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Ev3Dev.CSharp.EvA
 {
+    /// <summary>
+    /// Provides extension for <see cref="EventLoop"/> to allow registering attribute-marked objects.
+    /// </summary>
     public static class ModelParser
     {
         private struct EventHandler
@@ -17,9 +18,19 @@ namespace Ev3Dev.CSharp.EvA
             public Action Handler { get; set; }
         }
 
+        /// <summary>
+        /// Looks for attribute-marked methods and properties and adds them to event loop.
+        /// </summary>
+        /// <param name="loop"></param>
+        /// <param name="model"></param>
+        /// <param name="allowEndless">
+        /// If equals to false, parser will check existense of shutdown events and will throw exception if there is noone.
+        /// </param>
         public static void RegisterModel( this EventLoop loop, object model, bool allowEndless = false )
         {
             var type = model.GetType( );
+
+            #region Switch generation
 
             // create events from switch properties
 
@@ -38,7 +49,7 @@ namespace Ev3Dev.CSharp.EvA
                                                                         prop.Name ) );
                 }
 
-                var getter = CreateGetter( model, prop );
+                var getter = DelegateGenerator.CreateGetter( model, prop );
                 object cache = null;
                 bool started = true;
                 Func<bool> switchGetter = ( ) =>
@@ -56,6 +67,10 @@ namespace Ev3Dev.CSharp.EvA
                 switches.Add( prop.Name, switchGetter );
             }
 
+            #endregion
+
+            #region Shutdown events generation
+
             var shutdownEvents = from prop in type.GetProperties( )
                                  let attribute = prop.GetCustomAttribute<ShutdownEventAttribute>( )
                                  where attribute != null
@@ -68,7 +83,7 @@ namespace Ev3Dev.CSharp.EvA
             {
                 Func<bool> shutdownEvent = null;
                 if ( prop.PropertyType == typeof( bool ) )
-                { shutdownEvent = CreateGetter<bool>( model, prop ); }
+                { shutdownEvent = DelegateGenerator.CreateGetter<bool>( model, prop ); }
                 if ( switches.ContainsKey( prop.Name ) )
                 { shutdownEvent = switches[prop.Name]; }
 
@@ -82,6 +97,10 @@ namespace Ev3Dev.CSharp.EvA
             {
                 throw new InvalidOperationException( Resources.NoShutdownEvent );
             }
+
+            #endregion
+
+            #region Actions generation
 
             // parse actions that will be performed on each iteration
             var actions = from method in type.GetMethods( )
@@ -105,7 +124,7 @@ namespace Ev3Dev.CSharp.EvA
                 bool reenterable;
                 var method = pair.Method;
 
-                if ( !IsAsync( method ) )
+                if ( !DelegateGenerator.IsAsync( method ) )
                 {
                     Action performAction = GetMethodAction( model, method, out reenterable );
                     if ( reenterable )
@@ -122,6 +141,10 @@ namespace Ev3Dev.CSharp.EvA
                     { nonReenterableAsyncs.Add( method.Name, new OrderedFunc<Task>( performAsync, pair.Priority ) ); }
                 }
             }
+
+            #endregion
+
+            #region Events and handlers generation
 
             // parse event handlers and their triggers
             var eventHandlersToAdd = new List<Tuple<Func<bool>, OrderedAction>>( );
@@ -159,7 +182,7 @@ namespace Ev3Dev.CSharp.EvA
                     Func<bool> triggerFunc = null;
                         
                     if ( prop.PropertyType == typeof( bool ) )
-                    { triggerFunc = CreateGetter<bool>( model, type.GetProperty( trigger ) ); }
+                    { triggerFunc = DelegateGenerator.CreateGetter<bool>( model, type.GetProperty( trigger ) ); }
                     if ( switches.ContainsKey( trigger ) )
                     { triggerFunc = switches[trigger]; }
 
@@ -194,7 +217,7 @@ namespace Ev3Dev.CSharp.EvA
 
                 bool reenterable;
 
-                if ( !IsAsync( method ) )
+                if ( !DelegateGenerator.IsAsync( method ) )
                 {
                     Action performAction = GetMethodAction( model, method, out reenterable );
                     if ( reenterable )
@@ -233,6 +256,10 @@ namespace Ev3Dev.CSharp.EvA
                     }
                 }
             }
+
+            #endregion
+
+            #region Create mutual exclusions
 
             // create mutual exclusions
             var exclusionAttributes = type.GetCustomAttributes<MutualExclusionAttribute>( );
@@ -375,6 +402,10 @@ namespace Ev3Dev.CSharp.EvA
                 }
             }
 
+            #endregion
+
+            #region Merge actions and events
+
             // merging reenterable and guarded methods
 
             actionsToAdd.AddRange( nonReenterableMethods.Select( x => x.Value ) );
@@ -405,25 +436,22 @@ namespace Ev3Dev.CSharp.EvA
                                     eventHandler.Item2.Action, 
                                     eventHandler.Item2.Priority );
             }
+
+            #endregion
         }
 
-        private static Func<T> CreateGetter<T>( object target, PropertyInfo property )
-        {
-            return Delegate.CreateDelegate( typeof( Func<T> ),
-                                            target,
-                                            property.GetMethod ) as Func<T>;
-        }
-
-        private static Func<object> CreateGetter( object target, PropertyInfo property )
-        {
-            return ReflectionToDelegateConverter.CreateFuncZeroArg( target, property.GetMethod );
-        }
-
-        private static bool IsAsync( MethodInfo method )
-        {
-            return method.GetCustomAttribute<AsyncStateMachineAttribute>( ) != null;
-        }
-
+        /// <summary>
+        /// Creates getters for all method parameters marked with <see cref="FromSourceAttribute"/>.
+        /// Throws an <see cref="InvalidOperationException"/> if some parameters are not marked with attribute 
+        /// or there is no source property for them, and <see cref="InvalidCastException"/> if parameter type is not equal to 
+        /// property type.
+        /// </summary>
+        /// <param name="target">Object-owner of method and parameters sources</param>
+        /// <param name="method">Method to parse its parameters</param>
+        /// <returns>
+        /// <see cref="List{Func{object}}"/> of parameters getters.
+        /// The order of getters corresponds to order of parameters in method signature.
+        /// </returns>
         private static List<Func<object>> GetParametersSources( object target, MethodInfo method )
         {
             var parameterGetters = new List<Func<object>>( );
@@ -457,7 +485,7 @@ namespace Ev3Dev.CSharp.EvA
                                                                    method.Name ) );
                 }
 
-                parameterGetters.Add( CreateGetter( target, sourceProperty ) );
+                parameterGetters.Add( DelegateGenerator.CreateGetter( target, sourceProperty ) );
             }
 
             return parameterGetters;
@@ -494,56 +522,12 @@ namespace Ev3Dev.CSharp.EvA
 
             var parameterGetters = GetParametersSources( target, method );
 
-            Action<object[]> callAction;
-
-            // create direct delegate invocation if argument count is small
-            if ( parameterGetters.Count == 0 )
-            {
-                var convertedAct = ReflectionToDelegateConverter.CreateActionZeroArg( target, method );
-                callAction = ( args ) => convertedAct( );
-            }
-            else if ( parameterGetters.Count == 1 )
-            {
-                var convertedAct = ReflectionToDelegateConverter.CreateAction1Arg( target, method );
-                callAction = ( args ) => convertedAct( args[0] );
-            }
-            else if ( parameterGetters.Count == 2 )
-            {
-                var convertedAct = ReflectionToDelegateConverter.CreateAction2Args( target, method );
-                callAction = ( args ) => convertedAct( args[0],
-                                                       args[1] );
-            }
-            else if ( parameterGetters.Count == 3 )
-            {
-                var convertedAct = ReflectionToDelegateConverter.CreateAction3Args( target, method );
-                callAction = ( args ) => convertedAct( args[0],
-                                                       args[1],
-                                                       args[2] );
-            }
-            else if ( parameterGetters.Count == 4 )
-            {
-                var convertedAct = ReflectionToDelegateConverter.CreateAction4Args( target, method );
-                callAction = ( args ) => convertedAct( args[0],
-                                                       args[1],
-                                                       args[2],
-                                                       args[3] );
-            }
-            else if ( parameterGetters.Count == 5 )
-            {
-                var convertedAct = ReflectionToDelegateConverter.CreateAction5Args( target, method );
-                callAction = ( args ) => convertedAct( args[0],
-                                                       args[1],
-                                                       args[2],
-                                                       args[3],
-                                                       args[4] );
-            }
-            else // otherwise perform slow invocation through reflection
-            { callAction = ( args ) => method.Invoke( target, args ); }
+            Action<object[]> callAction = DelegateGenerator.GenerateAction( target, method );
 
             if ( nonReenterable != null )
             {
-                callAction = MakeReenterable( callAction,
-                                              nonReenterable.DiscardRepeated );
+                callAction = DelegateGenerator.MakeReenterable( callAction,
+                                                                nonReenterable.DiscardRepeated );
             }
 
             Action performAction = ( ) =>
@@ -587,54 +571,12 @@ namespace Ev3Dev.CSharp.EvA
 
             var parameterGetters = GetParametersSources( target, method );
 
-            Func<object[], Task> callAction;
-
-            // create direct delegate invocation if argument count is small
-            if ( parameterGetters.Count == 0 )
-            {
-                var convertedFunc = ReflectionToDelegateConverter.CreateFuncZeroArg( target, method );
-                callAction = ( args ) => convertedFunc( ) as Task;
-            }
-            else if ( parameterGetters.Count == 1 )
-            { callAction = ( args ) => 
-                ReflectionToDelegateConverter.CreateFunc1Arg( target, method )( args[0] ) as Task; }
-            else if ( parameterGetters.Count == 2 )
-            {
-                var convertedFunc = ReflectionToDelegateConverter.CreateFunc2Args( target, method );
-                callAction = ( args ) => convertedFunc( args[0],
-                                                        args[1] ) as Task;
-            }
-            else if ( parameterGetters.Count == 3 )
-            {
-                var convertedFunc = ReflectionToDelegateConverter.CreateFunc3Args( target, method );
-                callAction = ( args ) => convertedFunc( args[0],
-                                                        args[1],
-                                                        args[2] ) as Task;
-            }
-            else if ( parameterGetters.Count == 4 )
-            {
-                var convertedFunc = ReflectionToDelegateConverter.CreateFunc4Args( target, method );
-                callAction = ( args ) => convertedFunc( args[0],
-                                                        args[1],
-                                                        args[2],
-                                                        args[3] ) as Task;
-            }
-            else if ( parameterGetters.Count == 5 )
-            {
-                var convertedFunc = ReflectionToDelegateConverter.CreateFunc5Args( target, method );
-                callAction = ( args ) => convertedFunc( args[0],
-                                                        args[1],
-                                                        args[2],
-                                                        args[3],
-                                                        args[4] ) as Task;
-            }
-            else // otherwise perform slow invocation through reflection
-            { callAction = ( args ) => method.Invoke( target, args ) as Task; }
+            Func<object[], Task> callAction = DelegateGenerator.GenerateAsyncAction( target, method );
 
             if ( nonReenterable != null )
             {
-                callAction = MakeAsyncReenterable( callAction,
-                                                   nonReenterable.DiscardRepeated );
+                callAction = DelegateGenerator.MakeAsyncReenterable( callAction,
+                                                                     nonReenterable.DiscardRepeated );
             }
 
             Func<Task> performAction = ( ) =>
@@ -645,86 +587,6 @@ namespace Ev3Dev.CSharp.EvA
             };
 
             return performAction;
-        }
-
-        private static Action<object[]> MakeReenterable( Action<object[]> action, bool discardRepeated )
-        {
-            var lockGuard = new object( );
-            bool locked = false;
-
-            if ( discardRepeated )
-            {
-                return ( args ) =>
-                {
-                    lock ( lockGuard )
-                    {
-                        if ( locked )
-                        { return; }
-                        locked = true;
-                    }
-                    action( args );
-                    lock ( lockGuard )
-                    { locked = false; }
-                };
-            }
-            else
-            {
-                return ( args ) =>
-                {
-                    lock ( lockGuard )
-                    {
-                        while ( locked )
-                        { Monitor.Wait( lockGuard ); }
-                        locked = true;
-                    }
-                    action( args );
-                    lock ( lockGuard )
-                    {
-                        locked = false;
-                        Monitor.Pulse( lockGuard );
-                    }
-                };
-            }
-        }
-
-        private static Func<object[], Task> MakeAsyncReenterable( Func<object[], Task> action, bool discardRepeated )
-        {
-            var lockGuard = new object( );
-            bool locked = false;
-
-            if ( discardRepeated )
-            {
-                return async ( args ) =>
-                {
-                    lock ( lockGuard )
-                    {
-                        if ( locked )
-                        { return; }
-                        locked = true;
-                    }
-                    await action( args );
-                    lock ( lockGuard )
-                    { locked = false; }
-                };
-            }
-            else
-            {
-                return async ( args ) =>
-                {
-                    lock ( lockGuard )
-                    {
-                        while ( locked )
-                        { Monitor.Wait( lockGuard ); }
-                        locked = true;
-                    }
-                    await action( args );
-                    lock ( lockGuard )
-                    {
-                        locked = false;
-                        Monitor.Pulse( lockGuard );
-                    }
-                };
-            }
         }
     }
 }
