@@ -129,6 +129,9 @@
   <data name="InvalidAsyncAction" xml:space="preserve">
     <value>Async action {0} must return object of class Task</value>
   </data>
+  <data name="InvalidCriticalAttribute" xml:space="preserve">
+    <value>Method {0} cannot be critical and non-critical at the same time</value>
+  </data>
   <data name="InvalidEventTrigger" xml:space="preserve">
     <value>Trigger {0} of event handler {1} must be bool</value>
   </data>

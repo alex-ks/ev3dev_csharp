@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NLog;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -21,12 +22,20 @@ namespace Ev3Dev.CSharp.EvA
         /// <summary>
         /// Looks for attribute-marked methods and properties and adds them to event loop.
         /// </summary>
-        /// <param name="loop"></param>
-        /// <param name="model"></param>
+        /// <param name="loop">A loop that will handle model methods.</param>
+        /// <param name="model">Object which methods will be used to generate loop actions and events.</param>
+        /// <param name="treatMethodsAsCritical">
+        /// If true, all methods without <see cref="CriticalAttribute"/> or <see cref="NonCriticalAttribute"/>
+        /// will be treated as critical (otherwise - non-critical).
+        /// </param>
         /// <param name="allowEndless">
         /// If equals to false, parser will check existense of shutdown events and will throw exception if there is noone.
         /// </param>
-        public static void RegisterModel( this EventLoop loop, object model, bool allowEndless = false )
+        public static void RegisterModel( this EventLoop loop,
+                                          object model,
+                                          bool treatMethodsAsCritical = true,
+                                          bool logExceptionsByDefaul = true,
+                                          bool allowEndless = false )
         {
             var type = model.GetType( );
 
@@ -102,6 +111,8 @@ namespace Ev3Dev.CSharp.EvA
 
             #region Actions generation
 
+            bool hasCriticalActions = false;
+
             // parse actions that will be performed on each iteration
             var actions = from method in type.GetMethods( )
                           let attribute = method.GetCustomAttribute<ActionAttribute>( )
@@ -114,6 +125,7 @@ namespace Ev3Dev.CSharp.EvA
                           };
 
             var actionsToAdd = new List<OrderedAction>( );
+            var asyncsToAdd = new List<OrderedFunc<Task>>( );
 
             // to keep actions that potentially need mutual exclusion
             var nonReenterableMethods = new Dictionary<string, OrderedAction>( );
@@ -124,9 +136,20 @@ namespace Ev3Dev.CSharp.EvA
                 bool reenterable;
                 var method = pair.Method;
 
+                if ( method.GetCustomAttribute<CriticalAttribute>( ) != null )
+                { hasCriticalActions = true; }
+
                 if ( !DelegateGenerator.IsAsync( method ) )
                 {
-                    Action performAction = GetMethodAction( model, method, out reenterable );
+                    Action performAction = GetMethodAction( model, 
+                                                            method, 
+                                                            out reenterable );
+                    performAction = AddExceptionHandling( performAction,
+                                                          method,
+                                                          model,
+                                                          loop,
+                                                          treatMethodsAsCritical,
+                                                          logExceptionsByDefaul );
                     if ( reenterable )
                     { actionsToAdd.Add( new OrderedAction( performAction, pair.Priority ) ); }
                     else
@@ -134,9 +157,17 @@ namespace Ev3Dev.CSharp.EvA
                 }
                 else
                 {
-                    Func<Task> performAsync = GetAsyncMethodAction( model, method, out reenterable );
+                    Func<Task> performAsync = GetAsyncMethodAction( model, 
+                                                                    method, 
+                                                                    out reenterable );
+                    performAsync = AddAsyncExceptionHandling( performAsync,
+                                                              method,
+                                                              model,
+                                                              loop,
+                                                              treatMethodsAsCritical,
+                                                              logExceptionsByDefaul );
                     if ( reenterable )
-                    { actionsToAdd.Add( new OrderedAction( ( ) => performAsync( ), pair.Priority ) ); }
+                    { asyncsToAdd.Add( new OrderedFunc<Task>( performAsync, pair.Priority ) ); }
                     else
                     { nonReenterableAsyncs.Add( method.Name, new OrderedFunc<Task>( performAsync, pair.Priority ) ); }
                 }
@@ -148,7 +179,8 @@ namespace Ev3Dev.CSharp.EvA
 
             // parse event handlers and their triggers
             var eventHandlersToAdd = new List<Tuple<Func<bool>, OrderedAction>>( );
-            
+            var eventAsyncsToAdd = new List<Tuple<Func<bool>, OrderedFunc<Task>>>( );
+
             // to keep handlers that potentially need mutual exclusion
             var nonReenterableEventHandlers = new Dictionary<string, Tuple<Func<bool>, OrderedAction>>( );
             var nonReenterableEventAsyncs = new Dictionary<string, Tuple<Func<bool>, OrderedFunc<Task>>>( );
@@ -168,6 +200,9 @@ namespace Ev3Dev.CSharp.EvA
             {
                 var method = eventHandler.Method;
                 var triggers = new List<Func<bool>>( );
+
+                if ( method.GetCustomAttribute<CriticalAttribute>( ) != null )
+                { hasCriticalActions = true; }
 
                 if ( eventHandler.Attribute.Triggers.Length == 0 )
                 {
@@ -219,7 +254,15 @@ namespace Ev3Dev.CSharp.EvA
 
                 if ( !DelegateGenerator.IsAsync( method ) )
                 {
-                    Action performAction = GetMethodAction( model, method, out reenterable );
+                    Action performAction = GetMethodAction( model, 
+                                                            method, 
+                                                            out reenterable );
+                    performAction = AddExceptionHandling( performAction,
+                                                          method,
+                                                          model,
+                                                          loop,
+                                                          treatMethodsAsCritical,
+                                                          logExceptionsByDefaul );
                     if ( reenterable )
                     {
                         eventHandlersToAdd
@@ -238,21 +281,32 @@ namespace Ev3Dev.CSharp.EvA
                 }
                 else
                 {
-                    Func<Task> performAsync = GetAsyncMethodAction( model, method, out reenterable );
+                    Func<Task> performAsync = GetAsyncMethodAction( model, 
+                                                                    method, 
+                                                                    out reenterable );
+                    performAsync = AddAsyncExceptionHandling( performAsync,
+                                                              method,
+                                                              model,
+                                                              loop,
+                                                              treatMethodsAsCritical,
+                                                              logExceptionsByDefaul );
+
                     if ( reenterable )
                     {
-                        eventHandlersToAdd
-                            .Add( new Tuple<Func<bool>, OrderedAction>( compositeTrigger,
-                                                                        new OrderedAction( ( ) => performAsync( ),
-                                                                                           eventHandler.Priority ) ) );
+                        eventAsyncsToAdd
+                            .Add( new Tuple<Func<bool>, 
+                                            OrderedFunc<Task>>( compositeTrigger,
+                                                                new OrderedFunc<Task>( performAsync,
+                                                                                       eventHandler.Priority ) ) );
                     }
                     else
                     {
                         nonReenterableEventAsyncs
                             .Add( method.Name,
-                                  new Tuple<Func<bool>, OrderedFunc<Task>>( compositeTrigger,
-                                                                            new OrderedFunc<Task>( performAsync,
-                                                                                                   eventHandler.Priority ) ) );
+                                  new Tuple<Func<bool>, 
+                                            OrderedFunc<Task>>( compositeTrigger,
+                                                                new OrderedFunc<Task>( performAsync,
+                                                                                       eventHandler.Priority ) ) );
                     }
                 }
             }
@@ -404,21 +458,24 @@ namespace Ev3Dev.CSharp.EvA
 
             #endregion
 
-            #region Merge actions and events
-
-            // merging reenterable and guarded methods
+            #region Merge reenterable and guarded methods
 
             actionsToAdd.AddRange( nonReenterableMethods.Select( x => x.Value ) );
-            actionsToAdd.AddRange( nonReenterableAsyncs.Select( x => 
-                new OrderedAction( ( ) => x.Value.Func( ), x.Value.Priority ) ) );
+            asyncsToAdd.AddRange( nonReenterableAsyncs.Select( x => x.Value ) );
 
             eventHandlersToAdd.AddRange( nonReenterableEventHandlers.Select( x => x.Value ) );
-            eventHandlersToAdd.AddRange( nonReenterableEventAsyncs.Select( x =>
-                new Tuple<Func<bool>, OrderedAction>( x.Value.Item1,
-                                                      new OrderedAction( ( ) => x.Value.Item2.Func( ),
-                                                                         x.Value.Item2.Priority ) ) ) );
+            eventAsyncsToAdd.AddRange( nonReenterableEventAsyncs.Select( x => x.Value ) );
 
-            // registering generated actions and events
+            actionsToAdd.AddRange( asyncsToAdd.Select( x => new OrderedAction( ( ) => x.Func( ), x.Priority ) ) );
+            eventHandlersToAdd.AddRange( 
+                eventAsyncsToAdd.Select( x => 
+                    new Tuple<Func<bool>, OrderedAction>( x.Item1, 
+                                                          new OrderedAction( ( ) => x.Item2.Func( ), 
+                                                                             x.Item2.Priority ) ) ) );
+
+            #endregion
+
+            #region Register generated actions and events
 
             foreach ( var shutdownEvent in shutdownEventsToAdd )
             {
@@ -436,6 +493,9 @@ namespace Ev3Dev.CSharp.EvA
                                     eventHandler.Item2.Action, 
                                     eventHandler.Item2.Priority );
             }
+
+            if ( hasCriticalActions || treatMethodsAsCritical )
+            { loop.CheckFatal = true; }
 
             #endregion
         }
@@ -490,7 +550,7 @@ namespace Ev3Dev.CSharp.EvA
 
             return parameterGetters;
         }
-      
+
         /// <summary>
         /// Creates method performing model action to call in event loop.
         /// Performs optimizations for actions with parameters count less or equal 5 - 
@@ -541,6 +601,76 @@ namespace Ev3Dev.CSharp.EvA
         }
 
         /// <summary>
+        /// Wraps an action by try-catch statement. 
+        /// Generates <see cref="EventLoop"/> shutdown for critical methods.
+        /// </summary>
+        /// <param name="action">Action to add exception handling</param>
+        /// <param name="method"><see cref="MethodInfo"/> object representing passed action</param>
+        /// <param name="target">Object-owner of the action</param>
+        /// <param name="loop">
+        /// Loop which will perform actions 
+        /// and will be stopped if critical action throws an exception
+        /// </param>
+        /// <param name="treatMethodsAsCritical">
+        /// If true, all methods without <see cref="CriticalAttribute"/> or <see cref="NonCriticalAttribute"/>
+        /// will be treated as critical (otherwise - non-critical).
+        /// </param>
+        /// <returns>Action with added exception handling logic</returns>
+        private static Action AddExceptionHandling( Action action,
+                                                    MethodInfo method,
+                                                    object target,
+                                                    EventLoop loop,
+                                                    bool treatMethodsAsCritical,
+                                                    bool logExceptionsByDefault )
+        {
+            Action result;
+            var critical = method.GetCustomAttribute<CriticalAttribute>( );
+            var nonCritical = method.GetCustomAttribute<NonCriticalAttribute>( );
+
+            if ( critical != null && nonCritical != null )
+            {
+                throw new InvalidOperationException( string.Format( Resources.InvalidCriticalAttribute,
+                                                                    method.Name ) );
+            }
+            else if ( critical != null )
+            {
+                Logger logger = null;
+                if ( critical.LogExceptions )
+                { logger = LogManager.GetLogger( target.GetType( ).Name ); }
+                result = ExceptionHandler.WrapCritical( action, 
+                                                        ( ) => loop.FatalOccurred = true, 
+                                                        logger );
+            }
+            else if ( nonCritical != null )
+            {
+                Logger logger = null;
+                if ( nonCritical.LogExceptions )
+                { logger = LogManager.GetLogger( target.GetType( ).Name ); }
+                result = ExceptionHandler.WrapNonCritical( action,
+                                                           logger );
+            }
+            else if ( treatMethodsAsCritical )
+            {
+                Logger logger = null;
+                if ( logExceptionsByDefault )
+                { logger = LogManager.GetLogger( target.GetType( ).Name ); }
+                result = ExceptionHandler.WrapCritical( action,
+                                                        ( ) => loop.FatalOccurred = true,
+                                                        logger );
+            }
+            else
+            {
+                Logger logger = null;
+                if ( logExceptionsByDefault )
+                { logger = LogManager.GetLogger( target.GetType( ).Name ); }
+                result = ExceptionHandler.WrapNonCritical( action,
+                                                           logger );
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// Creates method performing model async action to call in event loop.
         /// Performs optimizations for actions with parameters count less or equal 5 - 
         /// in this case methods are called via delegates, not reflection.
@@ -548,6 +678,10 @@ namespace Ev3Dev.CSharp.EvA
         /// <param name="target">Object-owner of the action</param>
         /// <param name="method"><see cref="MethodInfo"/> object representing action</param>
         /// <param name="reenterable">Returns if action is defined as reenterable</param>
+        /// <param name="treatMethodsAsCritical">
+        /// If true, all methods without <see cref="CriticalAttribute"/> or <see cref="NonCriticalAttribute"/>
+        /// will be treated as critical (otherwise - non-critical).
+        /// </param>
         /// <returns><see cref="Func{Task}"/> object to perform the action</returns>
         private static Func<Task> GetAsyncMethodAction( object target,
                                                         MethodInfo method,
@@ -587,6 +721,76 @@ namespace Ev3Dev.CSharp.EvA
             };
 
             return performAction;
+        }
+
+        /// <summary>
+        /// Wraps an async action by try-catch statement. 
+        /// Generates <see cref="EventLoop"/> shutdown for critical methods.
+        /// </summary>
+        /// <param name="async">Async action to add exception handling</param>
+        /// <param name="method"><see cref="MethodInfo"/> object representing passed action</param>
+        /// <param name="target">Object-owner of the action</param>
+        /// <param name="loop">
+        /// Loop which will perform actions 
+        /// and will be stopped if critical action throws an exception
+        /// </param>
+        /// <param name="treatMethodsAsCritical">
+        /// If true, all methods without <see cref="CriticalAttribute"/> or <see cref="NonCriticalAttribute"/>
+        /// will be treated as critical (otherwise - non-critical).
+        /// </param>
+        /// <returns>Action with added exception handling logic</returns>
+        private static Func<Task> AddAsyncExceptionHandling( Func<Task> async,
+                                                             MethodInfo method,
+                                                             object target,
+                                                             EventLoop loop,
+                                                             bool treatMethodsAsCritical,
+                                                             bool logExceptionsByDefault )
+        {
+            Func<Task> result;
+            var critical = method.GetCustomAttribute<CriticalAttribute>( );
+            var nonCritical = method.GetCustomAttribute<NonCriticalAttribute>( );
+
+            if ( critical != null && nonCritical != null )
+            {
+                throw new InvalidOperationException( string.Format( Resources.InvalidCriticalAttribute,
+                                                                    method.Name ) );
+            }
+            else if ( critical != null )
+            {
+                Logger logger = null;
+                if ( critical.LogExceptions )
+                { logger = LogManager.GetLogger( target.GetType( ).Name ); }
+                result = ExceptionHandler.WrapAsyncCritical( async,
+                                                             ( ) => loop.FatalOccurred = true,
+                                                             logger );
+            }
+            else if ( nonCritical != null )
+            {
+                Logger logger = null;
+                if ( nonCritical.LogExceptions )
+                { logger = LogManager.GetLogger( target.GetType( ).Name ); }
+                result = ExceptionHandler.WrapAsyncNonCritical( async,
+                                                                logger );
+            }
+            else if ( treatMethodsAsCritical )
+            {
+                Logger logger = null;
+                if ( logExceptionsByDefault )
+                { logger = LogManager.GetLogger( target.GetType( ).Name ); }
+                result = ExceptionHandler.WrapAsyncCritical( async,
+                                                             ( ) => loop.FatalOccurred = true,
+                                                             logger );
+            }
+            else
+            {
+                Logger logger = null;
+                if ( logExceptionsByDefault )
+                { logger = LogManager.GetLogger( target.GetType( ).Name ); }
+                result = ExceptionHandler.WrapAsyncNonCritical( async,
+                                                                logger );
+            }
+
+            return result;
         }
     }
 }

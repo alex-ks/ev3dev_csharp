@@ -97,6 +97,15 @@ namespace Ev3Dev.CSharp.EvA {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Method {0} cannot be critical and non-critical at the same time.
+        /// </summary>
+        internal static string InvalidCriticalAttribute {
+            get {
+                return ResourceManager.GetString("InvalidCriticalAttribute", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Trigger {0} of event handler {1} must be bool.
         /// </summary>
         internal static string InvalidEventTrigger {

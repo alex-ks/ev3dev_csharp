@@ -20,17 +20,34 @@ namespace Ev3Dev.CSharp.EvA
 
         private List<Func<bool>> _shutdownEvents = new List<Func<bool>>( );
 
+        private volatile bool _fatalOccurred = false;
+
+        /// <summary>
+        /// Indicates whether fatal error occurred during execution.
+        /// If true, loop will stop execution after active action is finished.
+        /// </summary>
+        public bool FatalOccurred
+        {
+            get { return _fatalOccurred; }
+            internal set { _fatalOccurred = value; }
+        }
+
+        /// <summary>
+        /// Indicates whether loop will check for fatal errors after each action.
+        /// </summary>
+        internal bool CheckFatal { get; set; } = true;
+
         /// <summary>
         /// Registers event trigger and its handler.
         /// </summary>
         /// <param name="trigger">
         /// Will be called on each iteration. If trigger returns true, 
-        /// event loop will call the handler
+        /// event loop will call the handler.
         /// </param>
-        /// <param name="handler">Will be called if trigger returns true</param>
+        /// <param name="handler">Will be called if trigger returns true.</param>
         /// <param name="priority">
         /// Indicates how early trigger will be polled during the iteration.
-        /// The bigger value, the earlier trigger will be polled
+        /// The bigger value, the earlier trigger will be polled.
         /// </param>
         public void RegisterEvent( Func<bool> trigger, Action handler, int priority = int.MinValue )
         {
@@ -69,6 +86,10 @@ namespace Ev3Dev.CSharp.EvA
             _actions.Clear( );
         }
 
+        private delegate void IterationPerformer( out bool shutdown,
+                                                  int cooldown,
+                                                  IEnumerable<Action> actionsToPerform );
+
         /// <summary>
         /// Starts event loop.
         /// </summary>
@@ -89,27 +110,86 @@ namespace Ev3Dev.CSharp.EvA
 
             var actionsToPerform = eventCheckers.Concat( _actions )
                                                 .OrderByDescending( x => x.Priority )
-                                                .Select( x => x.Action );
-            
+                                                .Select( x => x.Action ).ToList( );
+
+            IterationPerformer performIteration;
+
+            if ( CheckFatal )
+            { performIteration = PerformIterationWithChecks; }
+            else
+            { performIteration = PerformIterationWithoutChecks; }
+
             while ( !shutdown )
             {
-                foreach ( var needToShutdown in _shutdownEvents )
-                {
-                    if ( needToShutdown( ) )
-                    {
-                        shutdown = true;
-                        return;
-                    }
-                }
-
-                foreach ( var performAction in actionsToPerform )
-                {
-                    performAction( );
-                }
-
-                if ( millisecondsCooldown != 0 )
-                { Thread.Sleep( millisecondsCooldown ); }
+                performIteration( out shutdown, millisecondsCooldown, actionsToPerform );
             }
+        }
+
+        /// <summary>
+        /// Checks all events and performs all actions once. Does not check
+        /// if fatal error occurred.
+        /// </summary>
+        /// <param name="shutdown">Indicates if loop has to stop after this iteration.</param>
+        /// <param name="cooldown">Indicates how much thread will sleep after performing iteration.</param>
+        /// <param name="actionsToPerform">Collection of actions to perform on this iteration.</param>
+        private void PerformIterationWithoutChecks( out bool shutdown, 
+                                                    int cooldown, 
+                                                    IEnumerable<Action> actionsToPerform )
+        {
+            foreach ( var needToShutdown in _shutdownEvents )
+            {
+                if ( needToShutdown( ) )
+                {
+                    shutdown = true;
+                    return;
+                }
+            }
+
+            foreach ( var performAction in actionsToPerform )
+            {
+                performAction( );
+            }
+
+            if ( cooldown != 0 )
+            { Thread.Sleep( cooldown ); }
+
+            shutdown = false;
+        }
+
+        /// <summary>
+        /// Checks all events and performs all actions once. Checks if fatal error occurred after each
+        /// action call.
+        /// </summary>
+        /// <param name="shutdown">Indicates if loop has to stop after this iteration.</param>
+        /// <param name="cooldown">Indicates how much thread will sleep after performing iteration.</param>
+        /// <param name="actionsToPerform">Collection of actions to perform on this iteration.</param>
+        private void PerformIterationWithChecks( out bool shutdown,
+                                                 int cooldown,
+                                                 IEnumerable<Action> actionsToPerform )
+        {
+            foreach ( var needToShutdown in _shutdownEvents )
+            {
+                if ( needToShutdown( ) || _fatalOccurred )
+                {
+                    shutdown = true;
+                    return;
+                }
+            }
+
+            foreach ( var performAction in actionsToPerform )
+            {
+                if ( _fatalOccurred )
+                {
+                    shutdown = true;
+                    return;
+                }
+                performAction( );
+            }
+
+            if ( cooldown != 0 )
+            { Thread.Sleep( cooldown ); }
+
+            shutdown = false;
         }
 
         /// <summary>
