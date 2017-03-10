@@ -34,7 +34,7 @@ namespace Ev3Dev.CSharp.EvA
         public static void RegisterModel( this EventLoop loop,
                                           object model,
                                           bool treatMethodsAsCritical = true,
-                                          bool logExceptionsByDefaul = true,
+                                          bool logExceptionsByDefault = true,
                                           bool allowEndless = false )
         {
             var type = model.GetType( );
@@ -149,7 +149,7 @@ namespace Ev3Dev.CSharp.EvA
                                                           model,
                                                           loop,
                                                           treatMethodsAsCritical,
-                                                          logExceptionsByDefaul );
+                                                          logExceptionsByDefault );
                     if ( reenterable )
                     { actionsToAdd.Add( new OrderedAction( performAction, pair.Priority ) ); }
                     else
@@ -165,7 +165,7 @@ namespace Ev3Dev.CSharp.EvA
                                                               model,
                                                               loop,
                                                               treatMethodsAsCritical,
-                                                              logExceptionsByDefaul );
+                                                              logExceptionsByDefault );
                     if ( reenterable )
                     { asyncsToAdd.Add( new OrderedFunc<Task>( performAsync, pair.Priority ) ); }
                     else
@@ -262,7 +262,7 @@ namespace Ev3Dev.CSharp.EvA
                                                           model,
                                                           loop,
                                                           treatMethodsAsCritical,
-                                                          logExceptionsByDefaul );
+                                                          logExceptionsByDefault );
                     if ( reenterable )
                     {
                         eventHandlersToAdd
@@ -289,7 +289,7 @@ namespace Ev3Dev.CSharp.EvA
                                                               model,
                                                               loop,
                                                               treatMethodsAsCritical,
-                                                              logExceptionsByDefaul );
+                                                              logExceptionsByDefault );
 
                     if ( reenterable )
                     {

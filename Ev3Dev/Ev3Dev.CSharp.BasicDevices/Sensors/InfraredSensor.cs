@@ -2,14 +2,25 @@
 
 namespace Ev3Dev.CSharp.BasicDevices.Sensors
 {
+    /// <summary>
+    /// See http://www.ev3dev.org/docs/sensors/lego-ev3-infrared-sensor/ for details.
+    /// </summary>
 	public enum InfraredSensorMode
 	{
 		Proximity,
 		IrSeeker,
+        /// <summary>
+        /// Remote control mode similar to default EV3 remote control mode.
+        /// </summary>
 		IrRemoteControl,
+        /// <summary>
+        /// Use <see cref="InfraredRemoteDecoder"/> extensions to decode this mode values.
+        /// See http://www.ev3dev.org/docs/sensors/lego-ev3-infrared-sensor/#fn:alt-remote-mode-values
+        /// for details.
+        /// </summary>
 		IrRemoteControlAlternative,
 		/// <summary>
-		/// Tis mode is not usable. When switching to this mode, 
+		/// This mode is not usable. When switching to this mode, 
 		/// the sensor quits responding to the keep-alive messages and the sensor resets.
 		/// </summary>
 		IrSAlt,
@@ -41,6 +52,11 @@ namespace Ev3Dev.CSharp.BasicDevices.Sensors
 			
 		}
 
+        /// <summary>
+        /// It seems that IR mode change takes some time, so if we read its value right after the mode switch 
+        /// we may get some garbage instead of real values. So it's better to wait some time (my tests show 
+        /// that 30-40 ms is OK) before reading values.
+        /// </summary>
 		public new InfraredSensorMode Mode
 		{
 			get { return StringToMode( base.Mode ); }

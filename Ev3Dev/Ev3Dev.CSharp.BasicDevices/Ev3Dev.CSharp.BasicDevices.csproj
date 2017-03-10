@@ -44,6 +44,7 @@
   <ItemGroup>
     <Compile Include="Sensors\ColorSensor.cs" />
     <Compile Include="Sensors\GyroSensor.cs" />
+    <Compile Include="Sensors\InfraredRemoteDecoder.cs" />
     <Compile Include="Sensors\InfraredSensor.cs" />
     <Compile Include="Motors\LargeMotor.cs" />
     <Compile Include="Motors\LegoMotor.cs" />

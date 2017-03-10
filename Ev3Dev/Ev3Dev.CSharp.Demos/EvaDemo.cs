@@ -1,4 +1,7 @@
-﻿using Ev3Dev.CSharp.EvA;
+﻿using Ev3Dev.CSharp.BasicDevices;
+using Ev3Dev.CSharp.BasicDevices.Motors;
+using Ev3Dev.CSharp.BasicDevices.Sensors;
+using Ev3Dev.CSharp.EvA;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,63 +12,149 @@ using System.Threading.Tasks;
 
 namespace Ev3Dev.CSharp.Demos
 {
-    [MutualExclusion( nameof( WriteFirstAsync ), nameof( WriteSecondAsync ) )]
-    public class StreamWriterModel : IDisposable
+    public class DiscoveryCar : IDisposable
     {
-        public const int WaitTime = 100;
+        private LargeMotor _leftMotor, _rightMotor;
+        private MediumMotor _steeringMotor;
 
-        private StreamWriter writer;
-        private int counter = 0;
+        private ColorSensor _colorSensor;
+        private TouchSensor _touchSensor;
+        private InfraredSensor _infraredSensor;
         
-        public int ActivationCount { get; private set; }
+        public bool IsDark => _colorSensor.LightIntensity < 10;
 
         [ShutdownEvent]
-        public bool LimitReached => counter == 10;
-        public bool LimitAlmostReached => counter == 9;
+        public bool Touched => _touchSensor.State == TouchSensorState.Pressed;
 
-        public StreamWriterModel( Stream stream )
+        // There is conversion from bool to int in order to avoid bool switch ambiguity.
+        // Switch is used here to activate handler only twice: when button is pressed and
+        // when button is released.
+        // Otherwise, handler would be activated on each loop iteration while button is pressed.
+        [Switch]
+        public int ForwardRequired => _infraredSensor.RedDownPressed( ) ? 1 : 0;
+        [Switch]
+        public int BackwardRequired => _infraredSensor.BlueDownPressed( ) ? 1 : 0;
+        [Switch]
+        public int LeftTurnRequired => _infraredSensor.RedUpPressed( ) ? 1 : 0;
+        [Switch]
+        public int RightTurnRequired => _infraredSensor.BlueUpPressed( ) ? 1 : 0;
+
+        [EventHandler( nameof( ForwardRequired ) )]
+        public void DriveForward( [FromSource( nameof( ForwardRequired ) )] int forwardRequired,
+                                  [FromSource( nameof( BackwardRequired ) )] int backwardRequired )
         {
-            writer = new StreamWriter( stream );
+            if ( backwardRequired == 1 )
+                return;
+            if ( forwardRequired == 1 )
+                Move( power: 75 );
+            else
+                Stop( );
         }
 
-        [Action]
-        [Priority( 10 )]
-        [NonReenterable( DiscardRepeated = false )]
-        public async Task WriteFirstAsync( )
+        [EventHandler( nameof( BackwardRequired ) )]
+        public void DriveBackward( [FromSource( nameof( ForwardRequired ) )] int forwardRequired,
+                                   [FromSource( nameof( BackwardRequired ) )] int backwardRequired )
         {
-            await writer.WriteLineAsync( "Hello, world" );
-            await writer.FlushAsync( );
-            ++ActivationCount;
-            Thread.Sleep( WaitTime );
+            if ( forwardRequired == 1 )
+                return;
+            if ( backwardRequired == 1 )
+                Move( power: -75 );
+            else
+                Stop( );
         }
 
-        [Action]
-        [Priority( 5 )]
+        [EventHandler( nameof( LeftTurnRequired ) )]
+        public void TurnLeft( [FromSource( nameof( LeftTurnRequired ) )] int leftRequired,
+                              [FromSource( nameof( RightTurnRequired ) )] int rightRequired )
+        {
+            if ( rightRequired == 1 )
+                return;
+            if ( leftRequired == 1 )
+                _steeringMotor.RunForever( power: -30 );
+            else
+                _steeringMotor.RunToPosition( position: 0, power: 30 );
+        }
+
+        [EventHandler( nameof( LeftTurnRequired ) )]
+        public void TurnRight( [FromSource( nameof( LeftTurnRequired ) )] int leftRequired,
+                               [FromSource( nameof( RightTurnRequired ) )] int rightRequired )
+        {
+            if ( leftRequired == 1 )
+                return;
+            if ( rightRequired == 1 )
+                _steeringMotor.RunForever( power: 30 );
+            else
+                _steeringMotor.RunToPosition( position: 0, power: -30 );
+        }
+
+        [NonCritical]
         [NonReenterable]
-        public async Task WriteSecondAsync( )
+        [EventHandler( nameof( IsDark ) )]
+        public async Task FearDark( )
         {
-            await writer.WriteLineAsync( "Hello, world 2" );
-            await writer.FlushAsync( );
-            Thread.Sleep( WaitTime );
-            return;
+            await Sound.Speak( "It's dark, I'm scared", wordsPerMinute: 130, amplitude: 300 );
         }
 
-        [Action]
-        public void Increment( )
+        private void Move( sbyte power )
         {
-            ++counter;
+            _leftMotor.RunForever( power );
+            _rightMotor.RunForever( power );
         }
 
-        [EventHandler( nameof( LimitAlmostReached ) )]
-        public void AlertShutdown( [FromSource( nameof( ActivationCount ) )]int activationCount )
+        private void Stop( )
         {
-            writer.WriteLine( "Limit almost reached" );
-            writer.WriteLine( activationCount );
+            _leftMotor.Stop( );
+            _rightMotor.Stop( );
+        }
+
+        public DiscoveryCar( )
+        {
+            _leftMotor = new LargeMotor( OutputPort.OutD )
+            {
+                StopCommand = StopCommand.Brake
+            };
+            _rightMotor = new LargeMotor( OutputPort.OutA )
+            {
+                StopCommand = StopCommand.Brake
+            };
+            _steeringMotor = new MediumMotor( OutputPort.OutB )
+            {
+                StopCommand = StopCommand.Hold
+            };
+
+            _colorSensor = new ColorSensor( InputPort.In4 )
+            {
+                Mode = ColorSensorMode.AmbientLight
+            };
+            _touchSensor = new TouchSensor( InputPort.In1 );
+            _infraredSensor = new InfraredSensor( InputPort.In3 )
+            {
+                Mode = InfraredSensorMode.IrRemoteControlAlternative
+            };
+
+            // steering motor calibration
+
+            _steeringMotor.RunTimed( ms: 500, power: 50 );
+            var right = _steeringMotor.Position;
+            _steeringMotor.RunTimed( ms: 500, power: -50 );
+            var left = _steeringMotor.Position;
+            _steeringMotor.RunToPosition( position: ( right - left ) / 2, power: 50 );
+            _steeringMotor.Position = 0;
         }
 
         public void Dispose( )
         {
-            writer.Dispose( );
+            using ( _leftMotor )
+            using ( _rightMotor )
+            using ( _steeringMotor )
+            using ( _colorSensor )
+            using ( _touchSensor )
+            using ( _infraredSensor )
+            {
+                _leftMotor.Reset( );
+                _rightMotor.Reset( );
+                _steeringMotor.Reset( );
+            }
         }
     }
 
@@ -74,11 +163,10 @@ namespace Ev3Dev.CSharp.Demos
         public static void Main( )
         {
             var loop = new EventLoop( );
-            using ( var model = new StreamWriterModel( Console.OpenStandardOutput( ) ) )
+            using ( var car = new DiscoveryCar( ) )
             {
-                loop.RegisterModel( model );
-                // If we make cooldown more than WaitTime, method with lower priority will never be called
-                loop.Start( millisecondsCooldown: StreamWriterModel.WaitTime + 20 );
+                loop.RegisterModel( car, treatMethodsAsCritical: true );
+                loop.Start( millisecondsCooldown: 20 );
                 Thread.Sleep( 2000 );
             }
         }
