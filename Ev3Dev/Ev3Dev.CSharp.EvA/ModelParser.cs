@@ -232,9 +232,9 @@ namespace Ev3Dev.CSharp.EvA
                 }
 
                 Func<bool, bool, bool> compositionFunc;
-                if ( eventHandler.Attribute.TriggerComposition == CompositionType.AND )
+                if ( eventHandler.Attribute.TriggerComposition == CompositionType.And )
                 { compositionFunc = ( a, b ) => a && b; }
-                else if ( eventHandler.Attribute.TriggerComposition == CompositionType.OR )
+                else if ( eventHandler.Attribute.TriggerComposition == CompositionType.Or )
                 { compositionFunc = ( a, b ) => a || b; }
                 else
                 {

@@ -3,7 +3,7 @@
 namespace Ev3Dev.CSharp.BasicDevices.Sensors
 {
     /// <summary>
-    /// See http://www.ev3dev.org/docs/sensors/lego-ev3-infrared-sensor/ for details.
+    /// See http://docs.ev3dev.org/projects/lego-linux-drivers/en/ev3dev-jessie/sensor_data.html#lego-ev3-ir for details.
     /// </summary>
 	public enum InfraredSensorMode
 	{
@@ -15,7 +15,7 @@ namespace Ev3Dev.CSharp.BasicDevices.Sensors
 		IrRemoteControl,
         /// <summary>
         /// Use <see cref="InfraredRemoteDecoder"/> extensions to decode this mode values.
-        /// See http://www.ev3dev.org/docs/sensors/lego-ev3-infrared-sensor/#fn:alt-remote-mode-values
+        /// See http://docs.ev3dev.org/projects/lego-linux-drivers/en/ev3dev-jessie/sensor_data.html#lego-ev3-ir-mode3-value0
         /// for details.
         /// </summary>
 		IrRemoteControlAlternative,

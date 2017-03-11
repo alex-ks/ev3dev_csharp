@@ -10,25 +10,33 @@ namespace Ev3Dev.CSharp.BasicDevices.Sensors
     {
         public static bool BlueDownPressed( this InfraredSensor sensor )
         {
+            var value = sensor.GetValue( );
             return sensor.Mode == InfraredSensorMode.IrRemoteControlAlternative
-                   && ( sensor.GetValue( ) & 0x80 ) != 0;
+                   && ( value & 0x0F ) != 0
+                   && ( value & 0x80 ) != 0;
         }
 
         public static bool BlueUpPressed( this InfraredSensor sensor )
         {
+            var value = sensor.GetValue( );
             return sensor.Mode == InfraredSensorMode.IrRemoteControlAlternative
+                   && ( value & 0x0F ) != 0
                    && ( sensor.GetValue( ) & 0x40 ) != 0;
         }
 
         public static bool RedDownPressed( this InfraredSensor sensor )
         {
+            var value = sensor.GetValue( );
             return sensor.Mode == InfraredSensorMode.IrRemoteControlAlternative
+                   && ( value & 0x0F ) != 0
                    && ( sensor.GetValue( ) & 0x20 ) != 0;
         }
 
         public static bool RedUpPressed( this InfraredSensor sensor )
         {
+            var value = sensor.GetValue( );
             return sensor.Mode == InfraredSensorMode.IrRemoteControlAlternative
+                   && ( value & 0x0F ) != 0
                    && ( sensor.GetValue( ) & 0x10 ) != 0;
         }
     }

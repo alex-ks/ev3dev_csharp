@@ -27,6 +27,9 @@ namespace Ev3Dev.CSharp.BasicDevices.Motors
 		Hold
 	}
 
+    /// <summary>
+    /// Determines how motor will detect Run* task execution finish.
+    /// </summary>
 	public enum SynchronizationMode
 	{
 		/// <summary>
