@@ -42,6 +42,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Accessors\DebugAccessor.cs" />
     <Compile Include="Device.cs" />
     <Compile Include="IAttributeAccessor.cs" />
     <Compile Include="LazyTask.cs" />

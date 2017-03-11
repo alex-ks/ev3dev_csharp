@@ -3,10 +3,6 @@ using Ev3Dev.CSharp.BasicDevices.Motors;
 using Ev3Dev.CSharp.BasicDevices.Sensors;
 using Ev3Dev.CSharp.EvA;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,15 +19,16 @@ namespace Ev3Dev.CSharp.Demos
         private int _consoleLeft;
         private int _consoleTop;
 
-        public bool IsDark => _colorSensor.LightIntensity < 5;
+        public bool IsDark => _colorSensor.LightIntensity < 2;
 
         [ShutdownEvent]
         public bool Touched => _touchSensor.State == TouchSensorState.Pressed;
 
-        // There is conversion from bool to int in order to avoid bool switch ambiguity.
-        // Switch is used here to activate handler only twice: when button is pressed and
-        // when button is released.
-        // Otherwise, handler would be activated on each loop iteration while button is pressed.
+        /* There is conversion from bool to int in order to avoid bool switch ambiguity.
+         * Switch is used here to activate handler only twice: when button is pressed and
+         * when button is released.
+         * Otherwise, handler would be activated on each loop iteration while button is pressed.
+         */
         [Switch]
         public int ForwardRequired => _infraredSensor.RedDownPressed( ) ? 1 : 0;
         public bool NoBackward => _leftMotor.Speed <= 0;
@@ -66,22 +63,34 @@ namespace Ev3Dev.CSharp.Demos
                 Stop( );
         }
 
+        /*
+         * If we release the button before the turning is completed,
+         * two things will happen:
+         * 1. The wheels won't come back to their position correctly, because new command will interrupt old one;
+         * 2. First command waiting logic will be broken, because the wheels will never reach expected position,
+         * so the working thread will poll the motor forever.
+         * Because of this we make turning logic non-reenterable.
+         * Also, we should't discard repeated calls, because in this case the wheels won't
+         * come back to their original position. 
+         */
+        [NonReenterable( DiscardRepeated = false )]
         [EventHandler( nameof( LeftTurnRequired ), nameof( NoRightTurn ) )]
-        public void TurnLeft( [FromSource( nameof( LeftTurnRequired ) )] int leftRequired )
+        public async Task TurnLeft( [FromSource( nameof( LeftTurnRequired ) )] int leftRequired )
         {
             if ( leftRequired == 1 )
-                _steeringMotor.RunForever( power: -75 );
+                await _steeringMotor.Run( degrees: -45, power: 100 );
             else
-                _steeringMotor.Stop( );
+                await _steeringMotor.Run( degrees: 45, power: 100 );
         }
 
+        [NonReenterable( DiscardRepeated = false )]
         [EventHandler( nameof( RightTurnRequired ), nameof( NoLeftTurn ) )]
-        public void TurnRight( [FromSource( nameof( RightTurnRequired ) )] int rightRequired )
+        public async Task TurnRight( [FromSource( nameof( RightTurnRequired ) )] int rightRequired )
         {
             if ( rightRequired == 1 )
-                _steeringMotor.RunForever( power: 75 );
+                await _steeringMotor.Run( degrees: 45, power: 100 );
             else
-                _steeringMotor.Stop( );
+                await _steeringMotor.Run( degrees: -45, power: 100 );
         }
 
         [NonCritical]
@@ -93,7 +102,8 @@ namespace Ev3Dev.CSharp.Demos
             await Task.Delay( 1000 );
         }
 
-        [Action]
+        // Uncomment this if you want to see values of properties
+        //[Action]
         public void DebugOutput( )
         {
             Console.SetCursorPosition( _consoleLeft, _consoleTop );
@@ -101,17 +111,21 @@ namespace Ev3Dev.CSharp.Demos
             Console.WriteLine( $"{nameof( BackwardRequired )}: {BackwardRequired}" );
             Console.WriteLine( $"{nameof( LeftTurnRequired )}: {LeftTurnRequired}" );
             Console.WriteLine( $"{nameof( RightTurnRequired )}: {RightTurnRequired}" );
-            Console.WriteLine( $"{nameof( NoForward )}: {NoForward}" );
-            Console.WriteLine( $"{nameof( NoBackward )}: {NoBackward}" );
+            Console.WriteLine( $"{nameof( NoLeftTurn )}: {NoLeftTurn}" );
+            Console.WriteLine( $"{nameof( NoRightTurn )}: {NoRightTurn}" );
             Console.WriteLine( $"Light: {_colorSensor.LightIntensity}" );
-            Console.WriteLine( $"Current power: {_leftMotor.DutyCycle}" );
-            Console.WriteLine( $"Set power: {_leftMotor.DutyCycleSp}" );
+            Console.WriteLine( $"Steering: {_steeringMotor.Speed}" );
         }
 
         private void Move( sbyte power )
         {
-            _leftMotor.RunForever( -power );
-            _rightMotor.RunForever( -power );
+            /* Interesting detail: sbyte uses int version of operator -, so -power has 
+             * int type, not sbyte. Because of this, RunForever( -power ) calls version for speed (int), 
+             * not for power (sbyte).
+             */
+            power *= -1;
+            _leftMotor.RunForever( power );
+            _rightMotor.RunForever( power );
         }
 
         private void Stop( )
@@ -124,13 +138,11 @@ namespace Ev3Dev.CSharp.Demos
         {
             _leftMotor = new LargeMotor( OutputPort.OutD )
             {
-                StopCommand = StopCommand.Brake,
-                DutyCycleSp = 75
+                StopCommand = StopCommand.Brake
             };
             _rightMotor = new LargeMotor( OutputPort.OutA )
             {
-                StopCommand = StopCommand.Brake,
-                DutyCycleSp = 75
+                StopCommand = StopCommand.Brake
             };
             _steeringMotor = new MediumMotor( OutputPort.OutB )
             {
@@ -154,6 +166,9 @@ namespace Ev3Dev.CSharp.Demos
 
         public void Dispose( )
         {
+            /* There were used "using" constructions istead of direct Dispose( ) calls to ensure
+             * that all objects will be disposed even if some method throws an exception.
+             */
             using ( _leftMotor )
             using ( _rightMotor )
             using ( _steeringMotor )
@@ -178,7 +193,7 @@ namespace Ev3Dev.CSharp.Demos
             {
                 loop.RegisterModel( car, treatMethodsAsCritical: true );
                 Console.WriteLine( "Car components registered" );
-                loop.Start( millisecondsCooldown: 10 );
+                loop.Start( millisecondsCooldown: 5 );
                 Thread.Sleep( 500 );
             }
         }
