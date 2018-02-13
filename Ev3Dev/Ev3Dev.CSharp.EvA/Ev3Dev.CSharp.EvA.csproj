@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ev3Dev.CSharp.EvA</RootNamespace>
     <AssemblyName>Ev3Dev.CSharp.EvA</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -45,11 +46,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ActionAttribute.cs" />
+    <Compile Include="AttributeContracts\IActionSorter.cs" />
+    <Compile Include="AttributeContracts\IGlobalActionTransformer.cs" />
     <Compile Include="CriticalAttribute.cs" />
     <Compile Include="EventHandlerAttribute.cs" />
     <Compile Include="EventLoop.cs" />
     <Compile Include="ExceptionHandler.cs" />
     <Compile Include="FromSourceAttribute.cs" />
+    <Compile Include="AttributeContracts\IActionExtractor.cs" />
+    <Compile Include="AttributeContracts\IActionTransformer.cs" />
+    <Compile Include="AttributeContracts\IPropertyExtractor.cs" />
     <Compile Include="ModelParser.cs" />
     <Compile Include="DelegateGenerator.cs" />
     <Compile Include="MutualExclusionAttribute.cs" />
