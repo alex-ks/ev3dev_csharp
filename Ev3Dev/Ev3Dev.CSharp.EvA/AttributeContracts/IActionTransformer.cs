@@ -14,7 +14,7 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
             object[] attributes,
             IReadOnlyDictionary<string, IReadOnlyDictionary<Type, Func<object>>> properties);
 
-        Action TransformAsyncAction(
+        Func<Task> TransformAsyncAction(
             string name,
             Func<Task> action,
             object[] attributes,
