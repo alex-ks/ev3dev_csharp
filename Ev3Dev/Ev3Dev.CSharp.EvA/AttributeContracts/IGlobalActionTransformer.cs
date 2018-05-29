@@ -10,7 +10,7 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
     {
         IDictionary<string, Action> TransformActions(
             IReadOnlyDictionary<string, IReadOnlyDictionary<Type, Func<object>>> properties,
-            IReadOnlyDictionary<string, Action> actions,
-            IReadOnlyDictionary<string, Func<Task>> asyncActions);
+            IReadOnlyDictionary<string, (Action action, object[] attributes)> actions,
+            IReadOnlyDictionary<string, (Func<Task> action, object[] attributes)> asyncActions);
     }
 }

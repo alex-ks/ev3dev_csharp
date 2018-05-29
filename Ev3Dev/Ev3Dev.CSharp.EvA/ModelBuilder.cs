@@ -26,23 +26,26 @@ namespace Ev3Dev.CSharp.EvA
                 throw new InvalidOperationException(Resources.NoShutdownEvent);
 
             // all actions must have different names (no overload)
+            var (actions, asyncActions) = ExtractActions(model, properties);
+
 
             throw new NotImplementedException();
         }
 
-        private static Dictionary<string, Dictionary<Type, Func<object>>> ExtractProperties(object model)
+        private static Dictionary<string, IReadOnlyDictionary<Type, Func<object>>> ExtractProperties(object model)
         {
-            Dictionary<string, Dictionary<Type, Func<object>>> getters =
-                new Dictionary<string, Dictionary<Type, Func<object>>>();
+            Dictionary<string, IReadOnlyDictionary<Type, Func<object>>> getters =
+                new Dictionary<string, IReadOnlyDictionary<Type, Func<object>>>();
 
             foreach (var prop in model.GetType().GetProperties())
             {
                 // expecting no same-named properties
-                getters.Add(prop.Name, new Dictionary<Type, Func<object>>());
+                var dict = new Dictionary<Type, Func<object>>();
+                getters.Add(prop.Name, dict);
 
                 // plain getters
                 var getter = DelegateGenerator.CreateGetter(model, prop);
-                getters[prop.Name].Add(prop.PropertyType, getter);
+                dict.Add(prop.PropertyType, getter);
 
                 // custom getters
                 foreach (var extractor in prop.GetCustomAttributes(inherit: true)
@@ -50,7 +53,7 @@ namespace Ev3Dev.CSharp.EvA
                                               .Select(attr => attr as IPropertyExtractor))
                 {
                     var (customGetter, t) = extractor.ExtractProperty(model, prop);
-                    getters[prop.Name].Add(t, customGetter);
+                    dict.Add(t, customGetter);
                 }
             }
 
@@ -59,7 +62,7 @@ namespace Ev3Dev.CSharp.EvA
 
         private static List<Func<bool>> ExtractShutdownEvents(
             object model,
-            Dictionary<string, Dictionary<Type, Func<object>>> properties)
+            IReadOnlyDictionary<string, IReadOnlyDictionary<Type, Func<object>>> properties)
         {
             var shutdownEvents = from prop in model.GetType().GetProperties()
                                  let attribute = prop.GetCustomAttribute<ShutdownEventAttribute>()
@@ -88,6 +91,38 @@ namespace Ev3Dev.CSharp.EvA
             }
 
             return shutdownEventsGetters;
+        }
+
+        private static (Dictionary<string, (Action action, object[] attributes)> syncActions, 
+                        Dictionary<string, (Func<Task> action, object[] attributes)> asyncActions)
+            ExtractActions(object model, IReadOnlyDictionary<string, IReadOnlyDictionary<Type, Func<object>>> properties)
+        {
+            var actions = new Dictionary<string, (Action action, object[] attributes)>();
+            var asyncActions = new Dictionary<string, (Func<Task> action, object[] attributes)>();
+
+            foreach (var method in model.GetType().GetMethods())
+            {
+                var attributes = method.GetCustomAttributes(true);
+                var extractor = attributes.Select(attr => attr as IActionExtractor).Where(attr => attr != null).Single();
+
+                if (method.ReturnType == typeof(void))
+                {
+                    var action = extractor.ExtractAction(model, method, properties);
+                    actions.Add(method.Name, (action, attributes));
+                }
+                else if (method.ReturnType == typeof(Task))
+                {
+                    var action = extractor.ExtractAsyncAction(model, method, properties);
+                    asyncActions.Add(method.Name, (action, attributes));
+                }
+                else
+                {
+                    throw new InvalidOperationException(string.Format(Resources.InvalidAsyncAction,
+                                                                      method.Name));
+                }
+            }
+
+            return (actions, asyncActions);
         }
     }
 }
