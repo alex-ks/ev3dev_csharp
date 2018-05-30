@@ -14,9 +14,9 @@ namespace Ev3Dev.CSharp.EvA
     /// and false ortherwise.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-    public class SwitchAttribute : Attribute, IPropertyExtractor
+    public class SwitchAttribute : AbstractPropertyExtractor
     {
-        public (Func<object>, Type) ExtractProperty(object target, PropertyInfo property)
+        protected override (Delegate, Type) UnsafeExtractProperty(object target, PropertyInfo property)
         {
             if (property.GetCustomAttribute<SwitchAttribute>() == null)
                 throw new ArgumentException("No switch attribute on property"); // todo: add message to resources
@@ -29,7 +29,7 @@ namespace Ev3Dev.CSharp.EvA
             object cache = null;
             bool started = true;
 
-            Func<object> switchGetter = () =>
+            Func<bool> switchGetter = () =>
             {
                 var obj = getter();
                 if (started)

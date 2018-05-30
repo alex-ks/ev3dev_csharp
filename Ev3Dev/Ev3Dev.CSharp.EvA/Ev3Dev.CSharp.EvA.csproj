@@ -55,7 +55,7 @@
     <Compile Include="FromSourceAttribute.cs" />
     <Compile Include="AttributeContracts\IActionExtractor.cs" />
     <Compile Include="AttributeContracts\IActionTransformer.cs" />
-    <Compile Include="AttributeContracts\IPropertyExtractor.cs" />
+    <Compile Include="AttributeContracts\AbstractPropertyExtractor.cs" />
     <Compile Include="ModelBuilder.cs" />
     <Compile Include="ModelParser.cs" />
     <Compile Include="DelegateGenerator.cs" />
@@ -73,6 +73,7 @@
     <Compile Include="ShutdownEventAttribute.cs" />
     <Compile Include="NonReenterableAttribute.cs" />
     <Compile Include="SwitchAttribute.cs" />
+    <Compile Include="PropertyStorage.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources.resx">

@@ -12,12 +12,12 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
             string name, 
             Action action, 
             object[] attributes,
-            IReadOnlyDictionary<string, IReadOnlyDictionary<Type, Func<object>>> properties);
+            IReadOnlyDictionary<string, PropertyStorage> properties);
 
         Func<Task> TransformAsyncAction(
             string name,
             Func<Task> action,
             object[] attributes,
-            IReadOnlyDictionary<string, IReadOnlyDictionary<Type, Func<object>>> properties);
+            IReadOnlyDictionary<string, PropertyStorage> properties);
     }
 }

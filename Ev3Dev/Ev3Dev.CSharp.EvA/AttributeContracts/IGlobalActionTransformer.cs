@@ -9,7 +9,7 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
     public interface IGlobalActionTransformer
     {
         IDictionary<string, Action> TransformActions(
-            IReadOnlyDictionary<string, IReadOnlyDictionary<Type, Func<object>>> properties,
+            IReadOnlyDictionary<string, PropertyStorage> properties,
             IReadOnlyDictionary<string, (Action action, object[] attributes)> actions,
             IReadOnlyDictionary<string, (Func<Task> action, object[] attributes)> asyncActions);
     }

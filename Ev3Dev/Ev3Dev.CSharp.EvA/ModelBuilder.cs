@@ -33,29 +33,32 @@ namespace Ev3Dev.CSharp.EvA
             throw new NotImplementedException();
         }
 
-        private static Dictionary<string, IReadOnlyDictionary<Type, Func<object>>> ExtractProperties(object model)
+        private static Dictionary<string, PropertyStorage> ExtractProperties(object model)
         {
-            Dictionary<string, IReadOnlyDictionary<Type, Func<object>>> getters =
-                new Dictionary<string, IReadOnlyDictionary<Type, Func<object>>>();
+            Dictionary<string, PropertyStorage> getters =
+                new Dictionary<string, PropertyStorage>();
 
             foreach (var prop in model.GetType().GetProperties())
             {
                 // expecting no same-named properties
-                var dict = new Dictionary<Type, Func<object>>();
-                getters.Add(prop.Name, dict);
+                var dict = new Dictionary<Type, Delegate>();
 
                 // plain getters
-                var getter = DelegateGenerator.CreateGetter(model, prop);
-                dict.Add(prop.PropertyType, getter);
+                if (prop.PropertyType == typeof(bool))
+                    dict.Add(prop.PropertyType, DelegateGenerator.CreateGetter<bool>(model, prop));
+                else
+                    dict.Add(prop.PropertyType, DelegateGenerator.CreateGetter(model, prop));
 
                 // custom getters
                 foreach (var extractor in prop.GetCustomAttributes(inherit: true)
-                                              .Where(attr => attr is IPropertyExtractor)
-                                              .Select(attr => attr as IPropertyExtractor))
+                                              .Where(attr => attr is AbstractPropertyExtractor)
+                                              .Select(attr => attr as AbstractPropertyExtractor))
                 {
                     var (customGetter, t) = extractor.ExtractProperty(model, prop);
                     dict.Add(t, customGetter);
                 }
+
+                getters.Add(prop.Name, new PropertyStorage(dict));
             }
 
             return getters;
@@ -63,40 +66,23 @@ namespace Ev3Dev.CSharp.EvA
 
         private static List<Func<bool>> ExtractShutdownEvents(
             object model,
-            IReadOnlyDictionary<string, IReadOnlyDictionary<Type, Func<object>>> properties)
+            IReadOnlyDictionary<string, PropertyStorage> properties)
         {
             var shutdownEvents = from prop in model.GetType().GetProperties()
                                  let attribute = prop.GetCustomAttribute<ShutdownEventAttribute>()
                                  where attribute != null
                                  select prop;
 
-            var shutdownEventsGetters = new List<Func<bool>>();
-
-            foreach (var prop in shutdownEvents)
-            {
-                Func<bool> shutdownEvent = null;
-                
-                // small optimization - if property is exactly bool, get it instead of casting
-                if (prop.PropertyType == typeof(bool))
-                    shutdownEvent = DelegateGenerator.CreateGetter<bool>(model, prop);
-                else if (properties[prop.Name].ContainsKey(typeof(bool)))
-                {
-                    var getter = properties[prop.Name][typeof(bool)];
-                    shutdownEvent = () => true.Equals(getter());
-                }
-
-                if (shutdownEvent == null)
-                    throw new InvalidOperationException(Resources.InvalidShutdownEvent);
-
-                shutdownEventsGetters.Add(shutdownEvent);
-            }
+            var shutdownEventsGetters = shutdownEvents.Select(prop => properties[prop.Name].Boolean).ToList();
 
             return shutdownEventsGetters;
         }
 
         private static (IReadOnlyDictionary<string, (Action action, object[] attributes)>, 
                         IReadOnlyDictionary<string, (Func<Task> action, object[] attributes)>)
-            ExtractActions(object model, IReadOnlyDictionary<string, IReadOnlyDictionary<Type, Func<object>>> properties)
+            ExtractActions(
+                object model, 
+            IReadOnlyDictionary<string, PropertyStorage> properties)
         {
             var actions = new Dictionary<string, (Action action, object[] attributes)>();
             var asyncActions = new Dictionary<string, (Func<Task> action, object[] attributes)>();
@@ -131,7 +117,7 @@ namespace Ev3Dev.CSharp.EvA
             TransformActions( 
                 IReadOnlyDictionary<string, (Action action, object[] attributes)> syncActions,
                 IReadOnlyDictionary<string, (Func<Task> action, object[] attributes)> asyncActions,
-                IReadOnlyDictionary<string, IReadOnlyDictionary<Type, Func<object>>> properties)
+                IReadOnlyDictionary<string, PropertyStorage> properties)
         {
             var transformedActions = new Dictionary<string, (Action action, object[] attributes)>();
             var transformedAsyncs = new Dictionary<string, (Func<Task> action, object[] attributes)>();
