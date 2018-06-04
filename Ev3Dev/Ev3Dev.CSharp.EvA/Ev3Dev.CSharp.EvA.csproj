@@ -56,6 +56,7 @@
     <Compile Include="AttributeContracts\IActionExtractor.cs" />
     <Compile Include="AttributeContracts\IActionTransformer.cs" />
     <Compile Include="AttributeContracts\AbstractPropertyExtractor.cs" />
+    <Compile Include="LoopInterruptedException.cs" />
     <Compile Include="ModelBuilder.cs" />
     <Compile Include="ModelParser.cs" />
     <Compile Include="DelegateGenerator.cs" />
