@@ -34,50 +34,35 @@ namespace Ev3Dev.CSharp.EvA
             return () => { lock (lockGuard) { action(); } };
         }
 
-        private class NonReenterableAsync
-        {
-            private volatile bool _locked = false;
-            private object _lockGuard = new object();
-            private Func<Task> _action;
-
-            internal NonReenterableAsync(Func<Task> action)
-            {
-                _action = action;
-            }
-
-            internal async Task InvokeDiscardingRepeated()
-            {
-                lock (_lockGuard)
-                {
-                    if (_locked)
-                        return;
-                    _locked = true;
-                }
-                try { await _action(); }
-                finally { lock (_lockGuard) { _locked = false; } }
-            }
-
-            internal async Task InvokeCumulative()
-            {
-                lock (_lockGuard)
-                {
-                    while (_locked)
-                        Monitor.Wait(_lockGuard);
-                    _locked = true;
-                }
-                try { await _action(); }
-                finally { lock (_lockGuard) { _locked = false; } }
-            }
-        }
-
         public Func<Task> TransformAsyncAction(string name, Func<Task> action, object[] attributes, IReadOnlyDictionary<string, PropertyStorage> properties)
         {
-            var guarded = new NonReenterableAsync(action);
+            var lockGuard = new object();
+            var isLocked = false;
 
             if (DiscardRepeated)
-                return guarded.InvokeDiscardingRepeated;
+                return async () =>
+                {
+                    lock (lockGuard)
+                    {
+                        if (isLocked)
+                            return;
+                        isLocked = true;
+                    }
+                    try { await action(); }
+                    finally { lock (lockGuard) { isLocked = false; } }
+                };
 
-            return guarded.InvokeCumulative;
+            return async () =>
+            {
+                lock (lockGuard)
+                {
+                    while (isLocked)
+                        Monitor.Wait(lockGuard);
+                    isLocked = true;
+                }
+                try { await action(); }
+                finally { lock (lockGuard) { isLocked = false; } }
+            };
         }
     }
 }
