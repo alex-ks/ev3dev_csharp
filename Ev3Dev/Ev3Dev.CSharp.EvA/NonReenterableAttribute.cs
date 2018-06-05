@@ -27,7 +27,6 @@ namespace Ev3Dev.CSharp.EvA
                 {
                     if (!Monitor.TryEnter(lockGuard))
                         return;
-
                     try { action(); }
                     finally { Monitor.Exit(lockGuard); }
                 };
@@ -35,23 +34,50 @@ namespace Ev3Dev.CSharp.EvA
             return () => { lock (lockGuard) { action(); } };
         }
 
+        private class NonReenterableAsync
+        {
+            private volatile bool _locked = false;
+            private object _lockGuard = new object();
+            private Func<Task> _action;
+
+            internal NonReenterableAsync(Func<Task> action)
+            {
+                _action = action;
+            }
+
+            internal async Task InvokeDiscardingRepeated()
+            {
+                lock (_lockGuard)
+                {
+                    if (_locked)
+                        return;
+                    _locked = true;
+                }
+                try { await _action(); }
+                finally { lock (_lockGuard) { _locked = false; } }
+            }
+
+            internal async Task InvokeCumulative()
+            {
+                lock (_lockGuard)
+                {
+                    while (_locked)
+                        Monitor.Wait(_lockGuard);
+                    _locked = true;
+                }
+                try { await _action(); }
+                finally { lock (_lockGuard) { _locked = false; } }
+            }
+        }
+
         public Func<Task> TransformAsyncAction(string name, Func<Task> action, object[] attributes, IReadOnlyDictionary<string, PropertyStorage> properties)
         {
-            var lockGuard = new object();
+            var guarded = new NonReenterableAsync(action);
 
-            // check correctness with monitor
-            // looks like invalid
             if (DiscardRepeated)
-                return async () =>
-                {
-                    if (!Monitor.TryEnter(lockGuard))
-                        return;
+                return guarded.InvokeDiscardingRepeated;
 
-                    try { await action(); }
-                    finally { Monitor.Exit(lockGuard); }
-                };
-
-            throw new NotImplementedException();
+            return guarded.InvokeCumulative;
         }
     }
 }

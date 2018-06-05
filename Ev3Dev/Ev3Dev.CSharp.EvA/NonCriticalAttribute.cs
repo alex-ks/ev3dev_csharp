@@ -30,12 +30,14 @@ namespace Ev3Dev.CSharp.EvA
                 return () =>
                 {
                     try { action(); }
+                    catch (LoopInterruptedException e) { Console.Error.WriteLine(e); throw; }
                     catch (Exception e) { Console.Error.WriteLine(e); }
                 };
 
             return () =>
             {
                 try { action(); }
+                catch (LoopInterruptedException) { throw; }
                 catch (Exception) { }
             };
         }
@@ -54,12 +56,14 @@ namespace Ev3Dev.CSharp.EvA
                 return async () =>
                 {
                     try { await action(); }
+                    catch (LoopInterruptedException e) { Console.Error.WriteLine(e); throw; }
                     catch (Exception e) { Console.Error.WriteLine(e); }
                 };
 
             return async () =>
             {
                 try { await action(); }
+                catch (LoopInterruptedException) { throw; }
                 catch (Exception) { }
             };
         }
