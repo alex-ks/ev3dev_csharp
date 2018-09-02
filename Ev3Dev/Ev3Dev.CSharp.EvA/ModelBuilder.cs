@@ -30,13 +30,16 @@ namespace Ev3Dev.CSharp.EvA
 
             var (transformedActions, transformedAsyncs) = TransformActions(actions, asyncActions, properties);
 
+            var (globallyTransformedActions, globallyTransformedAsyncs) =
+                GloballyTransformActions(model, transformedActions, transformedAsyncs, properties);
+            
+
             throw new NotImplementedException();
         }
 
         private static Dictionary<string, PropertyStorage> ExtractProperties(object model)
         {
-            Dictionary<string, PropertyStorage> getters =
-                new Dictionary<string, PropertyStorage>();
+            var getters = new Dictionary<string, PropertyStorage>();
 
             foreach (var prop in model.GetType().GetProperties())
             {
@@ -147,6 +150,56 @@ namespace Ev3Dev.CSharp.EvA
 
                 transformedAsyncs.Add(pair.Key, (transformed, pair.Value.attributes));
             }
+
+            return (transformedActions, transformedAsyncs);
+        }
+
+        private static (IReadOnlyDictionary<string, (Action action, object[] attributes)>,
+                        IReadOnlyDictionary<string, (Func<Task> action, object[] attributes)>)
+            GloballyTransformActions(
+                object model,
+                IReadOnlyDictionary<string, (Action action, object[] attributes)> syncActions,
+                IReadOnlyDictionary<string, (Func<Task> action, object[] attributes)> asyncActions,
+                IReadOnlyDictionary<string, PropertyStorage> properties)
+        {
+            var transformedActions = new Dictionary<string, (Action action, object[] attributes)>();
+            var transformedAsyncs = new Dictionary<string, (Func<Task> action, object[] attributes)>();
+
+            foreach (var global in model.GetType()
+                                        .GetCustomAttributes()
+                                        .Select(attr => attr as IGlobalActionTransformer)
+                                        .Where(attr => attr != null))
+            {
+                var transformed = global.TransformActions(properties, syncActions, asyncActions);
+                
+                
+            }
+
+            foreach (var pair in syncActions)
+            {
+                var transformers = pair.Value.attributes.Select(attr => attr as IActionTransformer)
+                                                        .Where(attr => attr != null);
+
+                var transformed = pair.Value.action;
+
+                foreach (var transformer in transformers)
+                    transformed = transformer.TransformAction(pair.Key, transformed, pair.Value.attributes, properties);
+
+                transformedActions.Add(pair.Key, (transformed, pair.Value.attributes));
+            }
+
+            //foreach (var pair in asyncActions)
+            //{
+            //    var transformers = pair.Value.attributes.Select(attr => attr as IActionTransformer)
+            //                                            .Where(attr => attr != null);
+
+            //    var transformed = pair.Value.action;
+
+            //    foreach (var transformer in transformers)
+            //        transformed = transformer.TransformAsyncAction(pair.Key, transformed, pair.Value.attributes, properties);
+
+            //    transformedAsyncs.Add(pair.Key, (transformed, pair.Value.attributes));
+            //}
 
             return (transformedActions, transformedAsyncs);
         }

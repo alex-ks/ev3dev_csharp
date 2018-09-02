@@ -18,7 +18,11 @@ namespace Ev3Dev.CSharp.EvA
     {
         public bool DiscardRepeated { get; set; } = true;
 
-        public Action TransformAction(string name, Action action, object[] attributes, IReadOnlyDictionary<string, PropertyStorage> properties)
+        public Action TransformAction(
+            string name, 
+            Action action, 
+            object[] attributes, 
+            IReadOnlyDictionary<string, PropertyStorage> properties)
         {
             var lockGuard = new object();
 
@@ -34,7 +38,11 @@ namespace Ev3Dev.CSharp.EvA
             return () => { lock (lockGuard) { action(); } };
         }
 
-        public Func<Task> TransformAsyncAction(string name, Func<Task> action, object[] attributes, IReadOnlyDictionary<string, PropertyStorage> properties)
+        public Func<Task> TransformAsyncAction(
+            string name, 
+            Func<Task> action, 
+            object[] attributes, 
+            IReadOnlyDictionary<string, PropertyStorage> properties)
         {
             var lockGuard = new object();
             var isLocked = false;
