@@ -24,7 +24,7 @@ namespace Ev3Dev.CSharp.EvA
             Methods = methods;
         }
 
-        public LoopContents TransformLoop(LoopContents contents)
+        public LoopContents TransformLoop(LoopContents contents, object[] loopAttributes)
         {
             var exclusionGuard = new object();
             //bool locked = false;

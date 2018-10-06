@@ -190,7 +190,7 @@ namespace Ev3Dev.CSharp.Demos
         {
             using ( var car = new DiscoveryCar( ) )
             {
-                var loop = car.BuildLoop( treatMethodsAsCritical: true );
+                var loop = car.BuildLoop( );
                 Console.WriteLine( "Car components registered" );
                 loop.Start( millisecondsCooldown: 5 );
                 Thread.Sleep( 500 );

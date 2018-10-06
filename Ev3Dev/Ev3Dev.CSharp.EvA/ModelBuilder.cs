@@ -12,7 +12,6 @@ namespace Ev3Dev.CSharp.EvA
     {
         public static EventLoop BuildLoop(
             this object model,
-            bool treatMethodsAsCritical = true,
             bool logExceptionsByDefault = true,
             bool allowEndless = false)
         {
