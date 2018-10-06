@@ -48,6 +48,8 @@
     <Compile Include="CriticalAttribute.cs" />
     <Compile Include="EventHandlerAttribute.cs" />
     <Compile Include="EventLoop.cs" />
+    <Compile Include="EverythingIsCriticalAttribute.cs" />
+    <Compile Include="EverythingIsNonCriticalAttribute.cs" />
     <Compile Include="FromSourceAttribute.cs" />
     <Compile Include="AttributeContracts\IActionExtractor.cs" />
     <Compile Include="AttributeContracts\IActionTransformer.cs" />
