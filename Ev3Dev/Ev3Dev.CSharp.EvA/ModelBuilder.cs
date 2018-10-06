@@ -10,9 +10,8 @@ namespace Ev3Dev.CSharp.EvA
 {
     public static class ModelBuilder
     {
-        public static EventLoop Build(
-            this EventLoop loop,
-            object model,
+        public static EventLoop BuildLoop(
+            this object model,
             bool treatMethodsAsCritical = true,
             bool logExceptionsByDefault = true,
             bool allowEndless = false)
@@ -26,9 +25,22 @@ namespace Ev3Dev.CSharp.EvA
                 throw new InvalidOperationException(Resources.NoShutdownEvent);
 
             // all actions must have different names (no overload)
-            var loopContents = ExtractContents(model, properties).TransformActions();
+            var actions = ExtractContents(model, properties)
+                                    .TransformActions()
+                                    .TransformLoop(model)
+                                    .FlattenContents()
+                                    .OrderActions(model)
+                                    .ToList();
 
-            throw new NotImplementedException();
+            var loop = new EventLoop();
+
+            for (int i = 0; i < actions.Count; ++i)
+                loop.RegisterAction(actions[i], i);
+
+            foreach (var shutdownEvent in shutdownEvents)
+                loop.RegisterShutdownEvent(shutdownEvent);
+
+            return loop;
         }
 
         private static Dictionary<string, PropertyPack> ExtractProperties(object model)
@@ -154,7 +166,7 @@ namespace Ev3Dev.CSharp.EvA
             };
         }
 
-        private static LoopContents TransformLoop(object model, LoopContents contents)
+        private static LoopContents TransformLoop(this LoopContents contents, object model)
         {
             var transformedActions = new Dictionary<string, (Action action, object[] attributes)>();
             var transformedAsyncs = new Dictionary<string, (Func<Task> action, object[] attributes)>();
@@ -170,6 +182,29 @@ namespace Ev3Dev.CSharp.EvA
             }
 
             return contents;
+        }
+
+        private static IEnumerable<(Action action, object[] attributes)> FlattenContents(this LoopContents contents)
+        {
+            var flattenAsyncs = contents.AsyncActions.Values.Select(t =>
+            {
+                Action action = () => t.action();
+                return (action, t.attributes);
+            });
+
+            return flattenAsyncs.Concat(contents.Actions.Values);
+        }
+
+        private static IEnumerable<Action> OrderActions(this IEnumerable<(Action action, object[] attributes)> actions,
+                                                        object model)
+        {
+            var sorters = model.GetType()
+                               .GetCustomAttributes()
+                               .Select(attr => attr as IActionSorter)
+                               .Where(attr => attr != null);
+
+            return sorters.Aggregate(actions, (acts, sorter) => sorter.SortActions(acts))
+                          .Select(t => t.action);
         }
     }
 }

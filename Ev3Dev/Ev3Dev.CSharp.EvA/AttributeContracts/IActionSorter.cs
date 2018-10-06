@@ -9,6 +9,7 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
 {
     public interface IActionSorter
     {
-        IEnumerable<Action> SortActions(IEnumerable<(MethodInfo info, Action action)> actions);
+        IEnumerable<(Action action, object[] attributes)> SortActions(
+            IEnumerable<(Action action, object[] attributes)> actions);
     }
 }

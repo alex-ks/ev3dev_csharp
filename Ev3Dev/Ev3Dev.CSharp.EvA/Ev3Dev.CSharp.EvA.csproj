@@ -59,7 +59,6 @@
     <Compile Include="AttributeContracts\AbstractPropertyExtractor.cs" />
     <Compile Include="LoopInterruptedException.cs" />
     <Compile Include="ModelBuilder.cs" />
-    <Compile Include="ModelParser.cs" />
     <Compile Include="DelegateGenerator.cs" />
     <Compile Include="MutualExclusionAttribute.cs" />
     <Compile Include="NonCriticalAttribute.cs" />

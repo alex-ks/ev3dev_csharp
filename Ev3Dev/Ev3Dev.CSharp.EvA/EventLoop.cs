@@ -47,7 +47,7 @@ namespace Ev3Dev.CSharp.EvA
         /// <param name="handler">Will be called if trigger returns true.</param>
         /// <param name="priority">
         /// Indicates how early trigger will be polled during the iteration.
-        /// The bigger value, the earlier trigger will be polled.
+        /// The lower value, the earlier trigger will be polled.
         /// </param>
         public void RegisterEvent( Func<bool> trigger, Action handler, int priority = int.MinValue )
         {
@@ -109,7 +109,7 @@ namespace Ev3Dev.CSharp.EvA
                                                                                x.Value.Priority ) );
 
             var actionsToPerform = eventCheckers.Concat( _actions )
-                                                .OrderByDescending( x => x.Priority )
+                                                .OrderBy( x => x.Priority )
                                                 .Select( x => x.Action ).ToList( );
 
             IterationPerformer performIteration;

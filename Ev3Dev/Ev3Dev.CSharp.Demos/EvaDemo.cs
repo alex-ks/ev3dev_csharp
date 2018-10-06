@@ -188,10 +188,9 @@ namespace Ev3Dev.CSharp.Demos
     {
         public static void Main( )
         {
-            var loop = new EventLoop( );
             using ( var car = new DiscoveryCar( ) )
             {
-                loop.RegisterModel( car, treatMethodsAsCritical: true );
+                var loop = car.BuildLoop( treatMethodsAsCritical: true );
                 Console.WriteLine( "Car components registered" );
                 loop.Start( millisecondsCooldown: 5 );
                 Thread.Sleep( 500 );
