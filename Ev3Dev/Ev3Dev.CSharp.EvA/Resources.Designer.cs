@@ -133,6 +133,15 @@ namespace Ev3Dev.CSharp.EvA {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Method {0} does not exist.
+        /// </summary>
+        internal static string MethodNotFound {
+            get {
+                return ResourceManager.GetString("MethodNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Action parameter {0} of action {1} does not have source.
         /// </summary>
         internal static string NoParameterSource {
