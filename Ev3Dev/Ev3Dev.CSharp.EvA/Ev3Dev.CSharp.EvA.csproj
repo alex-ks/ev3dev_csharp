@@ -47,7 +47,8 @@
   <ItemGroup>
     <Compile Include="ActionAttribute.cs" />
     <Compile Include="AttributeContracts\IActionSorter.cs" />
-    <Compile Include="AttributeContracts\IGlobalActionTransformer.cs" />
+    <Compile Include="AttributeContracts\ILoopTransformer.cs" />
+    <Compile Include="AttributeContracts\LoopContents.cs" />
     <Compile Include="CriticalAttribute.cs" />
     <Compile Include="EventHandlerAttribute.cs" />
     <Compile Include="EventLoop.cs" />
@@ -74,7 +75,7 @@
     <Compile Include="ShutdownEventAttribute.cs" />
     <Compile Include="NonReenterableAttribute.cs" />
     <Compile Include="SwitchAttribute.cs" />
-    <Compile Include="PropertyStorage.cs" />
+    <Compile Include="AttributeContracts\PropertyPack.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources.resx">

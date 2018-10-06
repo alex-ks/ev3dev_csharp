@@ -19,7 +19,7 @@ namespace Ev3Dev.CSharp.EvA
         public Action ExtractAction(
             object target, 
             MethodInfo method, 
-            IReadOnlyDictionary<string, PropertyStorage> properties)
+            IReadOnlyDictionary<string, PropertyPack> properties)
         {
             if (method.ReturnType != typeof(void))
                 throw new InvalidOperationException(string.Format(Resources.InvalidAction,
@@ -41,7 +41,7 @@ namespace Ev3Dev.CSharp.EvA
         public Func<Task> ExtractAsyncAction(
             object target, 
             MethodInfo method, 
-            IReadOnlyDictionary<string, PropertyStorage> properties)
+            IReadOnlyDictionary<string, PropertyPack> properties)
         {
             if (method.ReturnType != typeof(Task))
                 throw new InvalidOperationException(string.Format(Resources.InvalidAsyncAction,

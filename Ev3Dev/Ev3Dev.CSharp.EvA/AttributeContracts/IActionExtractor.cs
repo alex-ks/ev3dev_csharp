@@ -12,11 +12,11 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
         Action ExtractAction(
             object target, 
             MethodInfo method, 
-            IReadOnlyDictionary<string, PropertyStorage> properties);
+            IReadOnlyDictionary<string, PropertyPack> properties);
 
         Func<Task> ExtractAsyncAction(
             object target,
             MethodInfo method,
-            IReadOnlyDictionary<string, PropertyStorage> properties);
+            IReadOnlyDictionary<string, PropertyPack> properties);
     }
 }

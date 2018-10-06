@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Ev3Dev.CSharp.EvA.AttributeContracts;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -25,7 +26,7 @@ namespace Ev3Dev.CSharp.EvA
         internal static List<Func<object>> GetParametersSources(
             object target,
             MethodInfo method,
-            IReadOnlyDictionary<string, PropertyStorage> properties)
+            IReadOnlyDictionary<string, PropertyPack> properties)
         {
             var parameterGetters = new List<Func<object>>();
             var type = target.GetType();

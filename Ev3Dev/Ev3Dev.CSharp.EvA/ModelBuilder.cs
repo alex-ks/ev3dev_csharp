@@ -11,12 +11,12 @@ namespace Ev3Dev.CSharp.EvA
     public static class ModelBuilder
     {
         public static EventLoop Build(
-            this EventLoop loop, 
+            this EventLoop loop,
             object model,
             bool treatMethodsAsCritical = true,
             bool logExceptionsByDefault = true,
             bool allowEndless = false)
-        {   
+        {
             var properties = ExtractProperties(model);
 
             // special case - shutdown events
@@ -26,20 +26,14 @@ namespace Ev3Dev.CSharp.EvA
                 throw new InvalidOperationException(Resources.NoShutdownEvent);
 
             // all actions must have different names (no overload)
-            var (actions, asyncActions) = ExtractActions(model, properties);
-
-            var (transformedActions, transformedAsyncs) = TransformActions(actions, asyncActions, properties);
-
-            var (globallyTransformedActions, globallyTransformedAsyncs) =
-                GloballyTransformActions(model, transformedActions, transformedAsyncs, properties);
-            
+            var loopContents = ExtractContents(model, properties).TransformActions();
 
             throw new NotImplementedException();
         }
 
-        private static Dictionary<string, PropertyStorage> ExtractProperties(object model)
+        private static Dictionary<string, PropertyPack> ExtractProperties(object model)
         {
-            var getters = new Dictionary<string, PropertyStorage>();
+            var getters = new Dictionary<string, PropertyPack>();
 
             foreach (var prop in model.GetType().GetProperties())
             {
@@ -61,15 +55,14 @@ namespace Ev3Dev.CSharp.EvA
                     dict.Add(t, customGetter);
                 }
 
-                getters.Add(prop.Name, new PropertyStorage(dict));
+                getters.Add(prop.Name, new PropertyPack(dict));
             }
 
             return getters;
         }
 
-        private static List<Func<bool>> ExtractShutdownEvents(
-            object model,
-            IReadOnlyDictionary<string, PropertyStorage> properties)
+        private static List<Func<bool>> ExtractShutdownEvents(object model,
+                                                              IReadOnlyDictionary<string, PropertyPack> properties)
         {
             var shutdownEvents = from prop in model.GetType().GetProperties()
                                  let attribute = prop.GetCustomAttribute<ShutdownEventAttribute>()
@@ -81,11 +74,7 @@ namespace Ev3Dev.CSharp.EvA
             return shutdownEventsGetters;
         }
 
-        private static (IReadOnlyDictionary<string, (Action action, object[] attributes)>, 
-                        IReadOnlyDictionary<string, (Func<Task> action, object[] attributes)>)
-            ExtractActions(
-                object model, 
-            IReadOnlyDictionary<string, PropertyStorage> properties)
+        private static LoopContents ExtractContents(object model, IReadOnlyDictionary<string, PropertyPack> properties)
         {
             var actions = new Dictionary<string, (Action action, object[] attributes)>();
             var asyncActions = new Dictionary<string, (Func<Task> action, object[] attributes)>();
@@ -112,20 +101,20 @@ namespace Ev3Dev.CSharp.EvA
                 }
             }
 
-            return (actions, asyncActions);
+            return new LoopContents
+            {
+                Properties = properties,
+                Actions = actions,
+                AsyncActions = asyncActions
+            };
         }
 
-        private static (IReadOnlyDictionary<string, (Action action, object[] attributes)>,
-                        IReadOnlyDictionary<string, (Func<Task> action, object[] attributes)>)
-            TransformActions( 
-                IReadOnlyDictionary<string, (Action action, object[] attributes)> syncActions,
-                IReadOnlyDictionary<string, (Func<Task> action, object[] attributes)> asyncActions,
-                IReadOnlyDictionary<string, PropertyStorage> properties)
+        private static LoopContents TransformActions(this LoopContents contents)
         {
             var transformedActions = new Dictionary<string, (Action action, object[] attributes)>();
             var transformedAsyncs = new Dictionary<string, (Func<Task> action, object[] attributes)>();
 
-            foreach (var pair in syncActions)
+            foreach (var pair in contents.Actions)
             {
                 var transformers = pair.Value.attributes.Select(attr => attr as IActionTransformer)
                                                         .Where(attr => attr != null);
@@ -133,12 +122,15 @@ namespace Ev3Dev.CSharp.EvA
                 var transformed = pair.Value.action;
 
                 foreach (var transformer in transformers)
-                    transformed = transformer.TransformAction(pair.Key, transformed, pair.Value.attributes, properties);
+                    transformed = transformer.TransformAction(pair.Key, 
+                                                              transformed, 
+                                                              pair.Value.attributes, 
+                                                              contents.Properties);
 
                 transformedActions.Add(pair.Key, (transformed, pair.Value.attributes));
             }
 
-            foreach (var pair in asyncActions)
+            foreach (var pair in contents.AsyncActions)
             {
                 var transformers = pair.Value.attributes.Select(attr => attr as IActionTransformer)
                                                         .Where(attr => attr != null);
@@ -146,62 +138,38 @@ namespace Ev3Dev.CSharp.EvA
                 var transformed = pair.Value.action;
 
                 foreach (var transformer in transformers)
-                    transformed = transformer.TransformAsyncAction(pair.Key, transformed, pair.Value.attributes, properties);
+                    transformed = transformer.TransformAsyncAction(pair.Key, 
+                                                                   transformed, 
+                                                                   pair.Value.attributes, 
+                                                                   contents.Properties);
 
                 transformedAsyncs.Add(pair.Key, (transformed, pair.Value.attributes));
             }
 
-            return (transformedActions, transformedAsyncs);
+            return new LoopContents
+            {
+                Actions = transformedActions,
+                AsyncActions = transformedAsyncs,
+                Properties = contents.Properties
+            };
         }
 
-        private static (IReadOnlyDictionary<string, (Action action, object[] attributes)>,
-                        IReadOnlyDictionary<string, (Func<Task> action, object[] attributes)>)
-            GloballyTransformActions(
-                object model,
-                IReadOnlyDictionary<string, (Action action, object[] attributes)> syncActions,
-                IReadOnlyDictionary<string, (Func<Task> action, object[] attributes)> asyncActions,
-                IReadOnlyDictionary<string, PropertyStorage> properties)
+        private static LoopContents TransformLoop(object model, LoopContents contents)
         {
             var transformedActions = new Dictionary<string, (Action action, object[] attributes)>();
             var transformedAsyncs = new Dictionary<string, (Func<Task> action, object[] attributes)>();
 
-            foreach (var global in model.GetType()
-                                        .GetCustomAttributes()
-                                        .Select(attr => attr as IGlobalActionTransformer)
-                                        .Where(attr => attr != null))
+            var transformers = model.GetType()
+                                    .GetCustomAttributes()
+                                    .Select(attr => attr as ILoopTransformer)
+                                    .Where(attr => attr != null);
+
+            foreach (var transformer in transformers)
             {
-                var transformed = global.TransformActions(properties, syncActions, asyncActions);
-                
-                
+                contents = transformer.TransformLoop(contents);
             }
 
-            foreach (var pair in syncActions)
-            {
-                var transformers = pair.Value.attributes.Select(attr => attr as IActionTransformer)
-                                                        .Where(attr => attr != null);
-
-                var transformed = pair.Value.action;
-
-                foreach (var transformer in transformers)
-                    transformed = transformer.TransformAction(pair.Key, transformed, pair.Value.attributes, properties);
-
-                transformedActions.Add(pair.Key, (transformed, pair.Value.attributes));
-            }
-
-            //foreach (var pair in asyncActions)
-            //{
-            //    var transformers = pair.Value.attributes.Select(attr => attr as IActionTransformer)
-            //                                            .Where(attr => attr != null);
-
-            //    var transformed = pair.Value.action;
-
-            //    foreach (var transformer in transformers)
-            //        transformed = transformer.TransformAsyncAction(pair.Key, transformed, pair.Value.attributes, properties);
-
-            //    transformedAsyncs.Add(pair.Key, (transformed, pair.Value.attributes));
-            //}
-
-            return (transformedActions, transformedAsyncs);
+            return contents;
         }
     }
 }

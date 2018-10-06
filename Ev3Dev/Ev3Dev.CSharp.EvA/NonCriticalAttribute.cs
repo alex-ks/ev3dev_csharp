@@ -20,7 +20,7 @@ namespace Ev3Dev.CSharp.EvA
             string name, 
             Action action, 
             object[] attributes, 
-            IReadOnlyDictionary<string, PropertyStorage> properties)
+            IReadOnlyDictionary<string, PropertyPack> properties)
         {
             // todo: add message to resources
             if (attributes.FirstOrDefault(attr => attr is CriticalAttribute) != null)
@@ -46,7 +46,7 @@ namespace Ev3Dev.CSharp.EvA
             string name, 
             Func<Task> action, 
             object[] attributes, 
-            IReadOnlyDictionary<string, PropertyStorage> properties)
+            IReadOnlyDictionary<string, PropertyPack> properties)
         {
             // todo: add message to resources
             if (attributes.FirstOrDefault(attr => attr is CriticalAttribute) != null)

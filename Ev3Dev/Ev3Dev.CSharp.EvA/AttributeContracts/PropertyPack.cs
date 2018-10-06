@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Ev3Dev.CSharp.EvA
+namespace Ev3Dev.CSharp.EvA.AttributeContracts
 {
-    public class PropertyStorage
+    public class PropertyPack
     {
         private readonly IReadOnlyDictionary<Type, Delegate> _getters;
 
@@ -31,7 +31,7 @@ namespace Ev3Dev.CSharp.EvA
             return false;
         }
 
-        public PropertyStorage(IReadOnlyDictionary<Type, Delegate> getters)
+        public PropertyPack(IReadOnlyDictionary<Type, Delegate> getters)
         {
             if (!(getters as IEnumerable<KeyValuePair<Type, Delegate>>).All(PairConsistent))
                 throw new ArgumentException("Property getter must be bool or object"); // todo: add to resources
