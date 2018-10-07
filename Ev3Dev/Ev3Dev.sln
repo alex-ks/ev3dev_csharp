@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27428.2015
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ev3Dev.CSharp", "Ev3Dev.CSharp\Ev3Dev.CSharp.csproj", "{E573FBDA-25AA-4E72-8D29-9872F42C80F6}"
 EndProject
@@ -10,6 +10,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ev3Dev.CSharp.Demos", "Ev3Dev.CSharp.Demos\Ev3Dev.CSharp.Demos.csproj", "{45D6F646-AE69-42C4-AF6E-BE503C0C7E8B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ev3Dev.CSharp.EvA", "Ev3Dev.CSharp.EvA\Ev3Dev.CSharp.EvA.csproj", "{873FBF26-2436-4383-8596-139B8DF973BF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ev3Dev.EvATest", "Ev3Dev.EvATest\Ev3Dev.EvATest.csproj", "{EB32083D-48F2-4148-8D96-AB781431D2C8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,8 +35,15 @@ Global
 		{873FBF26-2436-4383-8596-139B8DF973BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{873FBF26-2436-4383-8596-139B8DF973BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{873FBF26-2436-4383-8596-139B8DF973BF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB32083D-48F2-4148-8D96-AB781431D2C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB32083D-48F2-4148-8D96-AB781431D2C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB32083D-48F2-4148-8D96-AB781431D2C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB32083D-48F2-4148-8D96-AB781431D2C8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DAA3D368-2022-4856-806E-B2D3CEBEAA6E}
 	EndGlobalSection
 EndGlobal

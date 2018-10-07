@@ -90,26 +90,52 @@ namespace Ev3Dev.CSharp.EvA
             var actions = new Dictionary<string, (Action action, object[] attributes)>();
             var asyncActions = new Dictionary<string, (Func<Task> action, object[] attributes)>();
 
+            var names = new HashSet<string>();
+
             foreach (var method in model.GetType().GetMethods())
             {
                 var attributes = method.GetCustomAttributes(true);
-                var extractor = attributes.Select(attr => attr as IActionExtractor).Where(attr => attr != null).Single();
+                IActionExtractor extractor;
+
+                try
+                {
+                    extractor = attributes.Select(attr => attr as IActionExtractor)
+                                          .Where(attr => attr != null)
+                                          .SingleOrDefault();
+                }
+                catch (InvalidOperationException)
+                {
+                    // todo: add to resources
+                    throw new InvalidOperationException("Method should have only one action extractor");
+                }
+
+                if (extractor == null)
+                    continue;
 
                 if (method.ReturnType == typeof(void))
                 {
                     var action = extractor.ExtractAction(model, method, properties);
+
+                    if (names.Contains(method.Name))  // todo: add to resources
+                        throw new InvalidOperationException("All actions must have different names");
+
                     actions.Add(method.Name, (action, attributes));
                 }
                 else if (method.ReturnType == typeof(Task))
                 {
                     var action = extractor.ExtractAsyncAction(model, method, properties);
+
+                    if (names.Contains(method.Name))  // todo: add to resources
+                        throw new InvalidOperationException("All actions must have different names");
+
                     asyncActions.Add(method.Name, (action, attributes));
                 }
                 else
                 {
                     throw new InvalidOperationException(string.Format(Resources.InvalidAsyncAction,
-                                                                      method.Name));
+                                                                        method.Name));
                 }
+                names.Add(method.Name);
             }
 
             return new LoopContents
