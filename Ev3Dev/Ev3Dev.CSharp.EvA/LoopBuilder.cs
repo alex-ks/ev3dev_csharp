@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Ev3Dev.CSharp.EvA
 {
-    public static class ModelBuilder
+    public static class LoopBuilder
     {
         public static EventLoop BuildLoop(
             this object model,
@@ -171,13 +171,15 @@ namespace Ev3Dev.CSharp.EvA
             var transformedAsyncs = new Dictionary<string, (Func<Task> action, object[] attributes)>();
 
             var transformers = model.GetType()
-                                    .GetCustomAttributes()
+                                    .GetCustomAttributes(true)
                                     .Select(attr => attr as ILoopTransformer)
                                     .Where(attr => attr != null);
 
+            var attributes = model.GetType().GetCustomAttributes(true);
+
             foreach (var transformer in transformers)
             {
-                contents = transformer.TransformLoop(contents);
+                contents = transformer.TransformLoop(contents, attributes);
             }
 
             return contents;
@@ -198,7 +200,7 @@ namespace Ev3Dev.CSharp.EvA
                                                         object model)
         {
             var sorters = model.GetType()
-                               .GetCustomAttributes()
+                               .GetCustomAttributes(true)
                                .Select(attr => attr as IActionSorter)
                                .Where(attr => attr != null);
 
