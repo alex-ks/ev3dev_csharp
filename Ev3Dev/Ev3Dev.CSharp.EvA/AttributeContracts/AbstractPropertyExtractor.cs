@@ -12,9 +12,9 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
         public (Delegate, Type) ExtractProperty(object target, PropertyInfo property)
         {
             var (getter, type) = UnsafeExtractProperty(target, property);
-            if (property.PropertyType == typeof(bool) && !(getter is Func<bool>))
+            if (type == typeof(bool) && !(getter is Func<bool>))
                 throw new InvalidOperationException("Boolean property getter must be Func<bool>"); // todo: add to resources
-            if (property.PropertyType != typeof(bool) && !(getter is Func<object>))
+            if (type != typeof(bool) && !(getter is Func<object>))
                 throw new InvalidOperationException("Non-boolean property getter must be Func<object>"); // todo: add to resources
             return (getter, type);
         }

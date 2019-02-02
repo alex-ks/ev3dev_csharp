@@ -1,5 +1,6 @@
 ﻿using Ev3Dev.CSharp.EvA.AttributeContracts;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -15,7 +16,8 @@ namespace Ev3Dev.CSharp.EvA
             bool logExceptionsByDefault = true,
             bool allowEndless = false)
         {
-            var properties = ExtractProperties(model);
+            var loop = new EventLoop();
+            var properties = ExtractProperties(model, loop.ValuesCache);
 
             // special case - shutdown events
             var shutdownEvents = ExtractShutdownEvents(model, properties);
@@ -31,8 +33,6 @@ namespace Ev3Dev.CSharp.EvA
                                     .OrderActions(model)
                                     .ToList();
 
-            var loop = new EventLoop();
-
             for (int i = 0; i < actions.Count; ++i)
                 loop.RegisterAction(actions[i], i);
 
@@ -42,7 +42,9 @@ namespace Ev3Dev.CSharp.EvA
             return loop;
         }
 
-        private static Dictionary<string, PropertyPack> ExtractProperties(object model)
+        private static Dictionary<string, PropertyPack> ExtractProperties(
+            object model, 
+            Dictionary<(string, Type), object> valuesCache)
         {
             var getters = new Dictionary<string, PropertyPack>();
 
@@ -53,9 +55,15 @@ namespace Ev3Dev.CSharp.EvA
 
                 // plain getters
                 if (prop.PropertyType == typeof(bool))
-                    dict.Add(prop.PropertyType, DelegateGenerator.CreateGetter<bool>(model, prop));
+                    dict.AddCachingGetter(prop.PropertyType, 
+                                          DelegateGenerator.CreateGetter<bool>(model, prop), 
+                                          valuesCache, 
+                                          prop.Name);
                 else
-                    dict.Add(prop.PropertyType, DelegateGenerator.CreateGetter(model, prop));
+                    dict.AddCachingGetter(prop.PropertyType,
+                                          DelegateGenerator.CreateGetter(model, prop),
+                                          valuesCache,
+                                          prop.Name);
 
                 // custom getters
                 foreach (var extractor in prop.GetCustomAttributes(inherit: true)
@@ -63,13 +71,47 @@ namespace Ev3Dev.CSharp.EvA
                                               .Select(attr => attr as AbstractPropertyExtractor))
                 {
                     var (customGetter, t) = extractor.ExtractProperty(model, prop);
-                    dict.Add(t, customGetter);
+                    dict.AddCachingGetter(t, customGetter, valuesCache, prop.Name);
                 }
 
                 getters.Add(prop.Name, new PropertyPack(dict));
             }
 
             return getters;
+        }
+
+        private static void AddCachingGetter(this Dictionary<Type, Delegate> dict, 
+                                             Type type, 
+                                             Delegate delegateObj,
+                                             Dictionary<(string, Type), object> valuesCache,
+                                             string name)
+        {
+            if (type == typeof(bool))
+            {
+                var boolGetter = delegateObj as Func<bool>;
+                Func<bool> cachedGetter = () =>
+                {
+                    if (valuesCache.TryGetValue((name, type), out object cached))
+                        return (bool)cached;
+                    var value = boolGetter();
+                    valuesCache.Add((name, type), value);
+                    return value;
+                };
+                dict.Add(type, cachedGetter);
+            }
+            else
+            {
+                var getter = delegateObj as Func<object>;
+                Func<object> cachedGetter = () =>
+                {
+                    if (valuesCache.TryGetValue((name, type), out object cached))
+                        return cached;
+                    var value = getter();
+                    valuesCache.Add((name, type), value);
+                    return value;
+                };
+                dict.Add(type, cachedGetter);
+            }
         }
 
         private static List<Func<bool>> ExtractShutdownEvents(object model,

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -22,6 +23,13 @@ namespace Ev3Dev.CSharp.EvA
             new SortedSet<(Action action, int priority)>(new ActionsPrioritizer());
 
         private List<Func<bool>> _shutdownEvents = new List<Func<bool>>( );
+
+        // All the properties are accessed from the loop thread, so there is no need to
+        // mainain a concurrent cache.
+        private Dictionary<(string, Type), object> _valuesCache = 
+            new Dictionary<(string, Type), object>();
+
+        internal Dictionary<(string, Type), object> ValuesCache => _valuesCache;
 
         /// <summary>
         /// Registers event trigger and its handler.
@@ -102,6 +110,8 @@ namespace Ev3Dev.CSharp.EvA
 
                 if (millisecondsCooldown != 0)
                     Thread.Sleep(millisecondsCooldown);
+
+                _valuesCache.Clear();
             }
         }
 

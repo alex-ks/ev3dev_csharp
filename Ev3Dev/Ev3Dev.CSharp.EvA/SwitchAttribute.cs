@@ -34,6 +34,7 @@ namespace Ev3Dev.CSharp.EvA
                 var obj = getter();
                 if (started)
                 {
+                    cache = obj;
                     started = false;
                     return false;
                 }
