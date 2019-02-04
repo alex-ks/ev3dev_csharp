@@ -12,19 +12,19 @@ namespace Ev3Dev.EvATest
     {
         class SimpleSwitchModel
         {
-            private int value_ = 0;
-            private int iterationCounter_ = 0;
+            private int _value = 0;
+            private int _iterationCounter = 0;
 
             [ShutdownEvent]
-            public bool Finished => iterationCounter_ > 4;
+            public bool Finished => _iterationCounter > 4;
 
             [Switch]
-            public int Value => value_;
+            public int Value => _value;
 
             [Action]
             public void Do([FromSource("Value")] bool changed)
             {
-                switch (iterationCounter_++)
+                switch (_iterationCounter++)
                 {
                     case 0:
                         Assert.False(changed);
@@ -32,7 +32,7 @@ namespace Ev3Dev.EvATest
 
                     case 1:
                         Assert.False(changed);
-                        ++value_;
+                        ++_value;
                         break;
 
                     case 2:
@@ -56,24 +56,24 @@ namespace Ev3Dev.EvATest
 
         class MultipleSwitchUsagesModel
         {
-            private int value_ = 0;
-            private int fstIterationCounter_ = 0;
-            private int sndIterationCounter_ = 0;
+            private int _value = 0;
+            private int _fstIterationCounter = 0;
+            private int _sndIterationCounter = 0;
 
             [ShutdownEvent]
-            public bool Finished => fstIterationCounter_ > 2;
+            public bool Finished => _fstIterationCounter > 2;
 
             [Switch]
-            public int Value => value_;
+            public int Value => _value;
 
             [Action]
             public void OneDo([FromSource("Value")] bool changed)
             {
-                switch (fstIterationCounter_++)
+                switch (_fstIterationCounter++)
                 {
                     case 0:
                         Assert.False(changed);
-                        ++value_;
+                        ++_value;
                         break;
 
                     case 1:
@@ -85,7 +85,7 @@ namespace Ev3Dev.EvATest
             [Action]
             public void AnotherDo([FromSource("Value")] bool changed)
             {
-                switch (sndIterationCounter_++)
+                switch (_sndIterationCounter++)
                 {
                     case 0:
                         Assert.False(changed);

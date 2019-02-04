@@ -14,10 +14,11 @@ namespace Ev3Dev.CSharp.EvA
         public static EventLoop BuildLoop(
             this object model,
             bool logExceptionsByDefault = true,
+            bool loadPropertiesLazily = true,
             bool allowEndless = false)
         {
-            var loop = new EventLoop();
-            var properties = ExtractProperties(model, loop.ValuesCache);
+            var valuesCache = new Dictionary<(string, Type), object>();
+            var properties = ExtractProperties(model, valuesCache);
 
             // special case - shutdown events
             var shutdownEvents = ExtractShutdownEvents(model, properties);
@@ -32,6 +33,34 @@ namespace Ev3Dev.CSharp.EvA
                                     .FlattenContents()
                                     .OrderActions(model)
                                     .ToList();
+
+            var allGetters = properties.Select(pair => pair.Value.Select(innerPair => (pair.Key, innerPair)))
+                                       .Aggregate(Enumerable.Concat)
+                                       .Select(pair => new
+                                       {
+                                           name = pair.Key,
+                                           type = pair.innerPair.Key,
+                                           getter = pair.innerPair.Value
+                                       });
+
+            Action fillCache = () =>
+            {
+                foreach (var tuple in allGetters)
+                {
+                    if (tuple.type == typeof(bool))
+                    {
+                        var boolGetter = tuple.getter as Func<bool>;
+                        valuesCache[(tuple.name, tuple.type)] = boolGetter();
+                    }
+                    else
+                    {
+                        var getter = tuple.getter as Func<object>;
+                        valuesCache[(tuple.name, tuple.type)] = getter();
+                    }
+                }
+            };
+
+            var loop = new EventLoop(valuesCache, fillCache) { LoadPropertiesLazily = loadPropertiesLazily };
 
             for (int i = 0; i < actions.Count; ++i)
                 loop.RegisterAction(actions[i], i);

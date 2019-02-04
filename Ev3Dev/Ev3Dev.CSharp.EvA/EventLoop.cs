@@ -22,14 +22,32 @@ namespace Ev3Dev.CSharp.EvA
         private SortedSet<(Action action, int priority)> _actions = 
             new SortedSet<(Action action, int priority)>(new ActionsPrioritizer());
 
-        private List<Func<bool>> _shutdownEvents = new List<Func<bool>>( );
+        private List<Func<bool>> _shutdownEvents = new List<Func<bool>>();
 
         // All the properties are accessed from the loop thread, so there is no need to
         // mainain a concurrent cache.
         private Dictionary<(string, Type), object> _valuesCache = 
             new Dictionary<(string, Type), object>();
 
-        internal Dictionary<(string, Type), object> ValuesCache => _valuesCache;
+        private Action _populateCache;
+        private bool _shouldPopulateCache = false;
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        /// <param name="valuesCache"></param>
+        /// <param name="populateCache"></param>
+        internal EventLoop(Dictionary<(string, Type), object> valuesCache, Action populateCache)
+        {
+            _valuesCache = valuesCache;
+            _populateCache = populateCache ?? throw new ArgumentException("Populate cache function must not be null");
+        }
+
+        public bool LoadPropertiesLazily
+        {
+            get => !_shouldPopulateCache;
+            set => _shouldPopulateCache = !value;
+        }
 
         /// <summary>
         /// Registers event trigger and its handler.
@@ -93,6 +111,9 @@ namespace Ev3Dev.CSharp.EvA
 
             while (!shutdown)
             {
+                if (_shouldPopulateCache)
+                    _populateCache();
+
                 foreach (var needToShutdown in _shutdownEvents)
                 {
                     if (needToShutdown())

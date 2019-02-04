@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Ev3Dev.CSharp.EvA.AttributeContracts
 {
-    public class PropertyPack
+    public class PropertyPack : IEnumerable<KeyValuePair<Type, Delegate>>
     {
         private readonly IReadOnlyDictionary<Type, Delegate> _getters;
 
@@ -29,6 +30,16 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
             if (pair.Key != typeof(bool) && pair.Value is Func<object>)
                 return true;
             return false;
+        }
+
+        public IEnumerator<KeyValuePair<Type, Delegate>> GetEnumerator()
+        {
+            return _getters.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return _getters.GetEnumerator();
         }
 
         public PropertyPack(IReadOnlyDictionary<Type, Delegate> getters)
