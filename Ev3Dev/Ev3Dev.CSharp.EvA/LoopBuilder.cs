@@ -209,12 +209,7 @@ namespace Ev3Dev.CSharp.EvA
                 names.Add(method.Name);
             }
 
-            return new LoopContents
-            {
-                Properties = properties,
-                Actions = actions,
-                AsyncActions = asyncActions
-            };
+            return new LoopContents(properties, actions, asyncActions);
         }
 
         private static LoopContents TransformActions(this LoopContents contents)
@@ -254,12 +249,7 @@ namespace Ev3Dev.CSharp.EvA
                 transformedAsyncs.Add(pair.Key, (transformed, pair.Value.attributes));
             }
 
-            return new LoopContents
-            {
-                Actions = transformedActions,
-                AsyncActions = transformedAsyncs,
-                Properties = contents.Properties
-            };
+            return new LoopContents(contents.Properties, transformedActions, transformedAsyncs);
         }
 
         private static LoopContents TransformLoop(this LoopContents contents, object model)

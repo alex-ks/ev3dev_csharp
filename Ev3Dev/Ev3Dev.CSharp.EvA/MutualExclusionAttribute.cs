@@ -136,12 +136,7 @@ namespace Ev3Dev.CSharp.EvA
                 }
             }
 
-            return new LoopContents
-            {
-                Properties = contents.Properties,
-                Actions = guardedActions,
-                AsyncActions = guardedAsyncs
-            };
+            return new LoopContents(contents.Properties, guardedActions, guardedAsyncs);
         }
 
         private bool IsNonReenterable(object[] attributes) =>

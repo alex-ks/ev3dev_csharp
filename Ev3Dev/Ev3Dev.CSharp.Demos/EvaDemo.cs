@@ -136,23 +136,11 @@ namespace Ev3Dev.CSharp.Demos
 
         public DiscoveryCar( )
         {
-            _leftMotor = new LargeMotor( OutputPort.OutD )
-            {
-                StopCommand = StopCommand.Brake
-            };
-            _rightMotor = new LargeMotor( OutputPort.OutA )
-            {
-                StopCommand = StopCommand.Brake
-            };
-            _steeringMotor = new MediumMotor( OutputPort.OutB )
-            {
-                StopCommand = StopCommand.Hold
-            };
+            _leftMotor = new LargeMotor( OutputPort.OutD ) { StopCommand = StopCommand.Brake };
+            _rightMotor = new LargeMotor( OutputPort.OutA ) { StopCommand = StopCommand.Brake };
+            _steeringMotor = new MediumMotor( OutputPort.OutB ) { StopCommand = StopCommand.Hold };
 
-            _colorSensor = new ColorSensor( InputPort.In4 )
-            {
-                Mode = ColorSensorMode.AmbientLight
-            };
+            _colorSensor = new ColorSensor( InputPort.In4 ) { Mode = ColorSensorMode.AmbientLight };
             _touchSensor = new TouchSensor( InputPort.In1 );
             _infraredSensor = new InfraredSensor( InputPort.In3 )
             {
@@ -166,7 +154,7 @@ namespace Ev3Dev.CSharp.Demos
 
         public void Dispose( )
         {
-            /* There were used "using" constructions istead of direct Dispose( ) calls to ensure
+            /* There were used "using" constructions instead of direct Dispose( ) calls to ensure
              * that all objects will be disposed even if some method throws an exception.
              */
             using ( _leftMotor )

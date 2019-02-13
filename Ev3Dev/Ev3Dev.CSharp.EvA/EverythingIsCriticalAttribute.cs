@@ -47,12 +47,7 @@ namespace Ev3Dev.CSharp.EvA
                     guardedAsyncs[entry.Key] = (guardedAction, entry.Value.attributes);
                 }
 
-            return new LoopContents
-            {
-                Properties = contents.Properties,
-                Actions = guardedActions,
-                AsyncActions = guardedAsyncs
-            };
+            return new LoopContents(contents.Properties, guardedActions, guardedAsyncs);
         }
     }
 }

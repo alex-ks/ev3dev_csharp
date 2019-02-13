@@ -62,6 +62,7 @@
   <ItemGroup>
     <Compile Include="ActionsTest.cs" />
     <Compile Include="EventHandlerTest.cs" />
+    <Compile Include="ExceptionTest.cs" />
     <Compile Include="SwitchTest.cs" />
   </ItemGroup>
   <ItemGroup>

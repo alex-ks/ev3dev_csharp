@@ -126,7 +126,7 @@ namespace Ev3Dev.CSharp.EvA
                 foreach (var performAction in actionsToPerform)
                 {
                     try { performAction(); }
-                    catch (LoopInterruptedException) { break; }
+                    catch (LoopInterruptedException) { return; }
                 }
 
                 if (millisecondsCooldown != 0)

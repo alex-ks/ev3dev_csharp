@@ -13,7 +13,7 @@ namespace Ev3Dev.CSharp.EvA
         public LoopContents TransformLoop(LoopContents contents, object[] loopAttributes)
         {
             // todo: add message to resources
-            if (loopAttributes.Where(attr => attr is EverythingIsNonCriticalAttribute).FirstOrDefault() != null)
+            if (loopAttributes.Where(attr => attr is EverythingIsCriticalAttribute).FirstOrDefault() != null)
                 throw new InvalidOperationException("Ambiguous definition: EverythingIsNonCriticalAttribute is set too");
 
             var guarder = new NonCriticalAttribute();
@@ -47,12 +47,7 @@ namespace Ev3Dev.CSharp.EvA
                     guardedAsyncs[entry.Key] = (guardedAction, entry.Value.attributes);
                 }
 
-            return new LoopContents
-            {
-                Properties = contents.Properties,
-                Actions = guardedActions,
-                AsyncActions = guardedAsyncs
-            };
+            return new LoopContents(contents.Properties, guardedActions, guardedAsyncs);
         }
     }
 }
