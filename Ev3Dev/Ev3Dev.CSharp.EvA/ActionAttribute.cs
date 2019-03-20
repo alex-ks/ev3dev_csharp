@@ -11,7 +11,7 @@ namespace Ev3Dev.CSharp.EvA
     /// <summary>
     /// Declares that selected method should be called for each loop iteration.
     /// By default, non-async actions will be called synchronously and 
-    /// do not need to be declared with <see cref="NonReenterableAttribute"/>.
+    /// do not need to be declared with <see cref="DiscardableAttribute"/>.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public class ActionAttribute : Attribute, IActionExtractor

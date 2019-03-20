@@ -73,8 +73,7 @@ namespace Ev3Dev.CSharp.Demos
          * Also, we should't discard repeated calls, because in this case the wheels won't
          * come back to their original position. 
          */
-        [NonReenterable( DiscardRepeated = false )]
-        [EventHandler( nameof( LeftTurnRequired ), nameof( NoRightTurn ) )]
+        [Cumulative, EventHandler( nameof( LeftTurnRequired ), nameof( NoRightTurn ) )]
         public async Task TurnLeft( [FromSource( nameof( LeftTurnRequired ) )] int leftRequired )
         {
             if ( leftRequired == 1 )
@@ -83,8 +82,7 @@ namespace Ev3Dev.CSharp.Demos
                 await _steeringMotor.Run( degrees: 45, power: 100 );
         }
 
-        [NonReenterable( DiscardRepeated = false )]
-        [EventHandler( nameof( RightTurnRequired ), nameof( NoLeftTurn ) )]
+        [Cumulative, EventHandler( nameof( RightTurnRequired ), nameof( NoLeftTurn ) )]
         public async Task TurnRight( [FromSource( nameof( RightTurnRequired ) )] int rightRequired )
         {
             if ( rightRequired == 1 )
@@ -93,9 +91,7 @@ namespace Ev3Dev.CSharp.Demos
                 await _steeringMotor.Run( degrees: -45, power: 100 );
         }
 
-        [NonCritical]
-        [NonReenterable]
-        [EventHandler( nameof( IsDark ) )]
+        [NonCritical, Discardable, EventHandler( nameof( IsDark ) )]
         public async Task FearDark( )
         {
             await Sound.Speak( "It's dark, I'm scared", wordsPerMinute: 130, amplitude: 300 );

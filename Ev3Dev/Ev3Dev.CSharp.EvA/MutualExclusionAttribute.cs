@@ -114,7 +114,7 @@ namespace Ev3Dev.CSharp.EvA
                 if (contents.Actions.ContainsKey(methodName))
                 {
                     var (action, attributes) = contents.Actions[methodName];
-                    if (!IsNonReenterable(attributes))
+                    if (!IsSynchronized(attributes))
                         throw new InvalidOperationException(string.Format(Resources.NotNonReenterableMethod,
                                                                           methodName));
                     guardedActions[methodName] = 
@@ -123,7 +123,7 @@ namespace Ev3Dev.CSharp.EvA
                 else if (contents.AsyncActions.ContainsKey(methodName))
                 {
                     var (asyncAction, attributes) = contents.AsyncActions[methodName];
-                    if (!IsNonReenterable(attributes))
+                    if (!IsSynchronized(attributes))
                         throw new InvalidOperationException(string.Format(Resources.NotNonReenterableMethod,
                                                                           methodName));
                     guardedAsyncs[methodName] =
@@ -139,7 +139,7 @@ namespace Ev3Dev.CSharp.EvA
             return new LoopContents(contents.Properties, guardedActions, guardedAsyncs);
         }
 
-        private bool IsNonReenterable(object[] attributes) =>
-            attributes.Where(attr => attr is NonReenterableAttribute).FirstOrDefault() != null;
+        private bool IsSynchronized(object[] attributes) =>
+            attributes.Where(attr => attr is ISynchronizedTransformer).FirstOrDefault() != null;
     }
 }

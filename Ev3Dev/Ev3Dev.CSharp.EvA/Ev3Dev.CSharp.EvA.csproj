@@ -46,8 +46,11 @@
     <Compile Include="ActionAttribute.cs" />
     <Compile Include="AttributeContracts\IActionSorter.cs" />
     <Compile Include="AttributeContracts\ILoopTransformer.cs" />
+    <Compile Include="AttributeContracts\ISynchronizedTransformer.cs" />
     <Compile Include="AttributeContracts\LoopContents.cs" />
+    <Compile Include="AwaitableAttribute.cs" />
     <Compile Include="CriticalAttribute.cs" />
+    <Compile Include="CumulativeAttribute.cs" />
     <Compile Include="EventHandlerAttribute.cs" />
     <Compile Include="EventLoop.cs" />
     <Compile Include="EverythingIsCriticalAttribute.cs" />
@@ -70,7 +73,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="ShutdownEventAttribute.cs" />
-    <Compile Include="NonReenterableAttribute.cs" />
+    <Compile Include="DiscardableAttribute.cs" />
     <Compile Include="SwitchAttribute.cs" />
     <Compile Include="AttributeContracts\PropertyPack.cs" />
   </ItemGroup>
