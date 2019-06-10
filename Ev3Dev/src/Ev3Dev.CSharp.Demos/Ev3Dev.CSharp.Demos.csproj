@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ev3Dev.CSharp\Ev3Dev.CSharp.csproj" />
+    <ProjectReference Include="..\Ev3Dev.CSharp.BasicDevices\Ev3Dev.CSharp.BasicDevices.csproj" />
+    <ProjectReference Include="..\Ev3Dev.CSharp.EvA\Ev3Dev.CSharp.EvA.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies"
+                      Version="1.0.0-preview.2"
+                      PrivateAssets="All" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net471</TargetFramework>
+    <StartupObject>Ev3Dev.CSharp.Demos.SoundDemo</StartupObject>
+  </PropertyGroup>
+
+</Project>
