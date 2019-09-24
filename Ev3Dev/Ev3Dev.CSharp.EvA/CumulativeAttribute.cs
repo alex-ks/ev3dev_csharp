@@ -16,58 +16,49 @@ namespace Ev3Dev.CSharp.EvA
     /// When using property forwarding, the properties will be took from the current iteration scope. In other words,
     /// the properties will be taken from scope where the previous call has been finished and the current call has 
     /// been started.
-    /// For default model building (<see cref="LoopBuilder"/>) only makes sense for async methods.
     /// </summary>
-    public class CumulativeAttribute : Attribute, IActionTransformer, ISynchronizedTransformer
+    public class CumulativeAttribute : AbstractSynchronizedTransformer
     {
-        public Action TransformAction(
+        protected sealed override Action TransformActionImpl(
             string name,
             Action action,
             object[] attributes,
             IReadOnlyDictionary<string, PropertyPack> properties)
         {
-            if (attributes.Count(attr => attr is ISynchronizedTransformer) > 1)
-                throw new ArgumentException("Method must have only one ISynchronizedTransformer attribute");
-
-            var lockGuard = new object();
-            return () => { lock (lockGuard) { action(); } };
+            return () => { lock (LockGuard) { action(); } };
         }
 
-        public Func<Task> TransformAsyncAction(
+        protected sealed override Func<Task> TransformAsyncActionImpl(
             string name,
             Func<Task> action,
             object[] attributes,
             IReadOnlyDictionary<string, PropertyPack> properties)
         {
-            if (attributes.Count(attr => attr is ISynchronizedTransformer) > 1)
-                throw new ArgumentException("Method must have only one ISynchronizedTransformer attribute");
-
-            var lockGuard = new object();
             var isLocked = false;
 
             return async () =>
             {
-                if (!Monitor.TryEnter(lockGuard))
+                if (!Monitor.TryEnter(LockGuard))
                 {
                     await Task.Run(() =>
                     {
-                        lock (lockGuard)
+                        lock (LockGuard)
                         {
                             while (isLocked)
-                                Monitor.Wait(lockGuard);
+                                Monitor.Wait(LockGuard);
                             isLocked = true;
                         }
                     });
                 }
                 else if (isLocked)
                 {
-                    Monitor.Exit(lockGuard);
+                    Monitor.Exit(LockGuard);
                     await Task.Run(() =>
                     {
-                        lock (lockGuard)
+                        lock (LockGuard)
                         {
                             while (isLocked)
-                                Monitor.Wait(lockGuard);
+                                Monitor.Wait(LockGuard);
                             isLocked = true;
                         }
                     });
@@ -75,16 +66,16 @@ namespace Ev3Dev.CSharp.EvA
                 else
                 {
                     isLocked = true;
-                    Monitor.Exit(lockGuard);
+                    Monitor.Exit(LockGuard);
                 }
 
                 try { await action(); }
                 finally
                 {
-                    lock (lockGuard)
+                    lock (LockGuard)
                     {
                         isLocked = false;
-                        Monitor.Pulse(lockGuard);
+                        Monitor.Pulse(LockGuard);
                     }
                 }
             };

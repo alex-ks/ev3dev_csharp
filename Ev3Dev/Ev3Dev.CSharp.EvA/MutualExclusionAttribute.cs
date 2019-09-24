@@ -11,135 +11,65 @@ namespace Ev3Dev.CSharp.EvA
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public class MutualExclusionAttribute : Attribute, ILoopTransformer
     {
-        public string[] Methods { get; }
+        internal ISet<string> MethodsToGuard { get; }
 
-        /// <summary>
-        /// Indicates whether to discard action or event handler if 
-        /// one of the mutexed methods is running. True by default.
-        /// </summary>
-        public bool DiscardExcluded { get; set; } = true;
-
-        public MutualExclusionAttribute( params string[] methods )
+        public MutualExclusionAttribute(params string[] methods)
         {
-            Methods = methods;
+            MethodsToGuard = new SortedSet<string>(methods);
         }
 
         public LoopContents TransformLoop(LoopContents contents, object[] loopAttributes)
         {
+            // Preconditions check.
+            foreach (var attr in loopAttributes)
+            {
+                var anotherMutex = attr as MutualExclusionAttribute;
+                if (anotherMutex == null)
+                    continue;
+                if (MethodsToGuard.Overlaps(anotherMutex.MethodsToGuard))
+                    throw new ArgumentException("Every action may be used only in one mutual exclusion.");
+            }
+
+            foreach (var name in MethodsToGuard)
+            {
+                if (!contents.Actions.ContainsKey(name) && !contents.AsyncActions.ContainsKey(name))
+                    throw new ArgumentException(Resources.MethodNotFound);
+            }
+
+            // Change LockGuard of every listed AbstractSynchronizedTransformer to single synchronization point.
             var exclusionGuard = new object();
-            //bool locked = false;
-            //string enteredName = null;
-            int exclusionCounter = 0;
-            int current = -1;
 
             var guardedActions = new Dictionary<string, (Action, object[])>();
             foreach (var entry in contents.Actions)
+            {
+                if (MethodsToGuard.Contains(entry.Key))
+                {
+                    var synchronizer = FindSynchronizedTransformer(entry.Value.attributes);
+                    if (synchronizer == null)
+                        throw new InvalidOperationException(Resources.NotNonReenterableMethod);
+                    synchronizer.LockGuard = exclusionGuard;
+                }
                 guardedActions[entry.Key] = entry.Value;
+            }
 
             var guardedAsyncs = new Dictionary<string, (Func<Task>, object[])>();
             foreach (var entry in contents.AsyncActions)
-                guardedAsyncs[entry.Key] = entry.Value;
-
-            foreach (var methodName in Methods)
             {
-                // Using indexing to allow multiple entrance for the same method
-                // This delegates repeating entrances handling to non-reenterable attribute
-                int exclusionIndex = exclusionCounter++;
-
-                // These templates define how mutual exclusion is handled for method
-                Func<Action, Action> GuardAction;
-                Func<Func<Task>, Func<Task>> GuardAsyncAction;
-
-                if (DiscardExcluded)
+                if (MethodsToGuard.Contains(entry.Key))
                 {
-                    GuardAction = action =>
-                        () =>
-                        {
-                            lock (exclusionGuard)
-                            {
-                                if (current != -1)
-                                { return; }
-                                action();
-                                Monitor.Pulse(exclusionGuard);
-                            }
-                        };
-                    GuardAsyncAction = asyncAction =>
-                        async () =>
-                        {
-                            lock (exclusionGuard)
-                            {
-                                if (current != -1 && current != exclusionIndex)
-                                { return; }
-                                current = exclusionIndex;
-                            }
-                            await asyncAction();
-                            lock (exclusionGuard)
-                            {
-                                current = -1;
-                                Monitor.Pulse(exclusionGuard);
-                            }
-                        };
+                    var synchronizer = FindSynchronizedTransformer(entry.Value.attributes);
+                    if (synchronizer == null)
+                        throw new InvalidOperationException(Resources.NotNonReenterableMethod);
+                    synchronizer.LockGuard = exclusionGuard;
                 }
-                else
-                {
-                    GuardAction = action =>
-                        () =>
-                        {
-                            lock (exclusionGuard)
-                            {
-                                while (current != -1)
-                                { Monitor.Wait(exclusionGuard); }
-                                action();
-                                Monitor.Pulse(exclusionGuard);
-                            }
-                        };
-                    GuardAsyncAction = asyncAction =>
-                        async () =>
-                        {
-                            lock (exclusionGuard)
-                            {
-                                while (current != -1 && current != exclusionIndex)
-                                { Monitor.Wait(exclusionGuard); }
-                                current = exclusionIndex;
-                            }
-                            await asyncAction();
-                            lock (exclusionGuard)
-                            {
-                                current = -1;
-                                Monitor.Pulse(exclusionGuard);
-                            }
-                        };
-                }
-
-                if (contents.Actions.ContainsKey(methodName))
-                {
-                    var (action, attributes) = contents.Actions[methodName];
-                    if (!IsSynchronized(attributes))
-                        throw new InvalidOperationException(string.Format(Resources.NotNonReenterableMethod,
-                                                                          methodName));
-                    guardedActions[methodName] = 
-                        (GuardAction(contents.Actions[methodName].action), contents.Actions[methodName].attributes);
-                }
-                else if (contents.AsyncActions.ContainsKey(methodName))
-                {
-                    var (asyncAction, attributes) = contents.AsyncActions[methodName];
-                    if (!IsSynchronized(attributes))
-                        throw new InvalidOperationException(string.Format(Resources.NotNonReenterableMethod,
-                                                                          methodName));
-                    guardedAsyncs[methodName] =
-                        (GuardAsyncAction(contents.AsyncActions[methodName].action), contents.Actions[methodName].attributes);
-                }
-                else
-                {
-                    throw new InvalidOperationException(string.Format(Resources.MethodNotFound,
-                                                                      methodName));
-                }
+                guardedAsyncs[entry.Key] = entry.Value;
             }
 
             return new LoopContents(contents.Properties, guardedActions, guardedAsyncs);
         }
 
-        private bool IsSynchronized(object[] attributes) =>
-            attributes.Where(attr => attr is ISynchronizedTransformer).FirstOrDefault() != null;
+
+        private AbstractSynchronizedTransformer FindSynchronizedTransformer(object[] attributes) =>
+            attributes.Select(attr => attr as AbstractSynchronizedTransformer).SingleOrDefault(attr => attr != null);
     }
 }
