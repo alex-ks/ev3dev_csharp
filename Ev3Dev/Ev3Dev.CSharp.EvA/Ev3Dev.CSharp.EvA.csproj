@@ -47,7 +47,7 @@
     <Compile Include="AttributeContracts\IActionSorter.cs" />
     <Compile Include="AttributeContracts\ILoopTransformer.cs" />
     <Compile Include="AttributeContracts\AbstractSynchronizedTransformer.cs" />
-    <Compile Include="AttributeContracts\LoopContents.cs" />
+    <Compile Include="AttributeContracts\ActionContents.cs" />
     <Compile Include="AwaitableAttribute.cs" />
     <Compile Include="CriticalAttribute.cs" />
     <Compile Include="CumulativeAttribute.cs" />
@@ -59,6 +59,7 @@
     <Compile Include="AttributeContracts\IActionExtractor.cs" />
     <Compile Include="AttributeContracts\IActionTransformer.cs" />
     <Compile Include="AttributeContracts\AbstractPropertyExtractor.cs" />
+    <Compile Include="LoopContents.cs" />
     <Compile Include="LoopInterruptedException.cs" />
     <Compile Include="LoopBuilder.cs" />
     <Compile Include="DelegateGenerator.cs" />

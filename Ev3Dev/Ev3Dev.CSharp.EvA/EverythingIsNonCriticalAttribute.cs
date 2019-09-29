@@ -10,7 +10,7 @@ namespace Ev3Dev.CSharp.EvA
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
     public class EverythingIsNonCriticalAttribute : Attribute, ILoopTransformer
     {
-        public LoopContents TransformLoop(LoopContents contents, object[] loopAttributes)
+        public ActionContents TransformLoop(ActionContents contents, object[] loopAttributes)
         {
             // todo: add message to resources
             if (loopAttributes.Where(attr => attr is EverythingIsCriticalAttribute).FirstOrDefault() != null)
@@ -47,7 +47,7 @@ namespace Ev3Dev.CSharp.EvA
                     guardedAsyncs[entry.Key] = (guardedAction, entry.Value.attributes);
                 }
 
-            return new LoopContents(contents.Properties, guardedActions, guardedAsyncs);
+            return new ActionContents(contents.Properties, guardedActions, guardedAsyncs);
         }
     }
 }

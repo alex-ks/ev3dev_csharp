@@ -70,7 +70,7 @@ namespace Ev3Dev.EvATest
             private int counter_ = 0;
 
             [ShutdownEvent]
-            public bool ShouldStop => counter_ > 0;
+            public bool ShouldStop => counter_ > 1;
 
             public int Counter => counter_;
 
@@ -88,7 +88,7 @@ namespace Ev3Dev.EvATest
             var model = new NonCriticalActionModel();
             var loop = model.BuildLoop();
             loop.Start();
-            Assert.Equal(1, model.Counter);
+            Assert.Equal(2, model.Counter);
         }
 
         [EverythingIsNonCritical]
@@ -97,7 +97,7 @@ namespace Ev3Dev.EvATest
             private int counter_ = 0;
 
             [ShutdownEvent]
-            public bool ShouldStop => counter_ > 0;
+            public bool ShouldStop => counter_ > 1;
 
             public int Counter => counter_;
 
@@ -115,7 +115,7 @@ namespace Ev3Dev.EvATest
             var model = new EverythingIsNonCriticalActionModel();
             var loop = model.BuildLoop();
             loop.Start();
-            Assert.Equal(1, model.Counter);
+            Assert.Equal(2, model.Counter);
         }
 
         [EverythingIsCritical]
@@ -124,7 +124,7 @@ namespace Ev3Dev.EvATest
             private int counter_ = 0;
 
             [ShutdownEvent]
-            public bool ShouldStop => counter_ > 0;
+            public bool ShouldStop => counter_ > 1;
 
             public int Counter => counter_;
 
@@ -142,7 +142,7 @@ namespace Ev3Dev.EvATest
             var model = new EverythingIsNonCriticalActionModel();
             var loop = model.BuildLoop();
             loop.Start();
-            Assert.Equal(1, model.Counter);
+            Assert.Equal(2, model.Counter);
         }
 
         [EverythingIsNonCritical]

@@ -37,22 +37,20 @@ namespace Ev3Dev.CSharp.EvA
             object[] attributes, 
             IReadOnlyDictionary<string, PropertyPack> properties)
         {
-            var isLocked = false;
-
             return async () =>
             {
                 lock (LockGuard)
                 {
-                    if (isLocked)
+                    if (LockGuard.IsLocked)
                         return;
-                    isLocked = true;
+                    LockGuard.IsLocked = true;
                 }
                 try { await action(); }
                 finally
                 {
                     lock (LockGuard)
                     {
-                        isLocked = false;
+                        LockGuard.IsLocked = false;
                         Monitor.Pulse(LockGuard);
                     }
                 }

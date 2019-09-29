@@ -34,8 +34,6 @@ namespace Ev3Dev.CSharp.EvA
             object[] attributes,
             IReadOnlyDictionary<string, PropertyPack> properties)
         {
-            var isLocked = false;
-
             return async () =>
             {
                 if (!Monitor.TryEnter(LockGuard))
@@ -44,28 +42,28 @@ namespace Ev3Dev.CSharp.EvA
                     {
                         lock (LockGuard)
                         {
-                            while (isLocked)
+                            while (LockGuard.IsLocked)
                                 Monitor.Wait(LockGuard);
-                            isLocked = true;
+                            LockGuard.IsLocked = true;
                         }
                     });
                 }
-                else if (isLocked)
+                else if (LockGuard.IsLocked)
                 {
                     Monitor.Exit(LockGuard);
                     await Task.Run(() =>
                     {
                         lock (LockGuard)
                         {
-                            while (isLocked)
+                            while (LockGuard.IsLocked)
                                 Monitor.Wait(LockGuard);
-                            isLocked = true;
+                            LockGuard.IsLocked = true;
                         }
                     });
                 } 
                 else
                 {
-                    isLocked = true;
+                    LockGuard.IsLocked = true;
                     Monitor.Exit(LockGuard);
                 }
 
@@ -74,7 +72,7 @@ namespace Ev3Dev.CSharp.EvA
                 {
                     lock (LockGuard)
                     {
-                        isLocked = false;
+                        LockGuard.IsLocked = false;
                         Monitor.Pulse(LockGuard);
                     }
                 }

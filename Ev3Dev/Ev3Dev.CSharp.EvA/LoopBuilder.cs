@@ -30,8 +30,7 @@ namespace Ev3Dev.CSharp.EvA
             var actions = ExtractContents(model, properties)
                                     .TransformActions()
                                     .TransformLoop(model)
-                                    .FlattenContents()
-                                    .OrderActions(model)
+                                    .OrderActions()
                                     .ToList();
 
             var allGetters = properties.Select(pair => pair.Value.Select(innerPair => (pair.Key, innerPair)))
@@ -156,7 +155,7 @@ namespace Ev3Dev.CSharp.EvA
             return shutdownEventsGetters;
         }
 
-        private static LoopContents ExtractContents(object model, IReadOnlyDictionary<string, PropertyPack> properties)
+        private static ActionContents ExtractContents(object model, IReadOnlyDictionary<string, PropertyPack> properties)
         {
             var actions = new Dictionary<string, (Action action, object[] attributes)>();
             var asyncActions = new Dictionary<string, (Func<Task> action, object[] attributes)>();
@@ -165,6 +164,8 @@ namespace Ev3Dev.CSharp.EvA
 
             foreach (var method in model.GetType().GetMethods())
             {
+                // reflection attributes are recreated on each GetCustomAttributes call, so we need to be sure we call
+                // it only once.
                 var attributes = method.GetCustomAttributes(true);
                 IActionExtractor extractor;
 
@@ -209,10 +210,10 @@ namespace Ev3Dev.CSharp.EvA
                 names.Add(method.Name);
             }
 
-            return new LoopContents(properties, actions, asyncActions);
+            return new ActionContents(properties, actions, asyncActions);
         }
 
-        private static LoopContents TransformActions(this LoopContents contents)
+        private static ActionContents TransformActions(this ActionContents contents)
         {
             var transformedActions = new Dictionary<string, (Action action, object[] attributes)>();
             var transformedAsyncs = new Dictionary<string, (Func<Task> action, object[] attributes)>();
@@ -249,49 +250,32 @@ namespace Ev3Dev.CSharp.EvA
                 transformedAsyncs.Add(pair.Key, (transformed, pair.Value.attributes));
             }
 
-            return new LoopContents(contents.Properties, transformedActions, transformedAsyncs);
+            return new ActionContents(contents.Properties, transformedActions, transformedAsyncs);
         }
 
-        private static LoopContents TransformLoop(this LoopContents contents, object model)
+        private static LoopContents TransformLoop(this ActionContents contents, object model)
         {
             var transformedActions = new Dictionary<string, (Action action, object[] attributes)>();
             var transformedAsyncs = new Dictionary<string, (Func<Task> action, object[] attributes)>();
 
-            var transformers = model.GetType()
-                                    .GetCustomAttributes(true)
-                                    .Select(attr => attr as ILoopTransformer)
-                                    .Where(attr => attr != null);
-
             var attributes = model.GetType().GetCustomAttributes(true);
+
+            var transformers = attributes.Select(attr => attr as ILoopTransformer)
+                                         .Where(attr => attr != null);
 
             foreach (var transformer in transformers)
             {
                 contents = transformer.TransformLoop(contents, attributes);
             }
 
-            return contents;
+            return contents.ToLoopContents(attributes);
         }
 
-        private static IEnumerable<(Action action, object[] attributes)> FlattenContents(this LoopContents contents)
+        private static IEnumerable<Action> OrderActions(this LoopContents contents)
         {
-            var flattenAsyncs = contents.AsyncActions.Values.Select(t =>
-            {
-                Action action = () => t.action();
-                return (action, t.attributes);
-            });
-
-            return flattenAsyncs.Concat(contents.Actions.Values);
-        }
-
-        private static IEnumerable<Action> OrderActions(this IEnumerable<(Action action, object[] attributes)> actions,
-                                                        object model)
-        {
-            var sorters = model.GetType()
-                               .GetCustomAttributes(true)
-                               .Select(attr => attr as IActionSorter)
-                               .Where(attr => attr != null);
-
-            return sorters.Aggregate(actions, (acts, sorter) => sorter.SortActions(acts))
+            var sorters = contents.ModelAttributes.Select(attr => attr as IActionSorter)
+                                                  .Where(attr => attr != null);
+            return sorters.Aggregate(contents.Actions, (acts, sorter) => sorter.SortActions(acts))
                           .Select(t => t.action);
         }
     }

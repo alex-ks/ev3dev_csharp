@@ -8,6 +8,6 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
 {
     public interface ILoopTransformer
     {
-        LoopContents TransformLoop(LoopContents contents, object[] loopAttributes);
+        ActionContents TransformLoop(ActionContents contents, object[] loopAttributes);
     }
 }

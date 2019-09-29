@@ -13,7 +13,12 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
     /// </summary>
     public abstract class AbstractSynchronizedTransformer : Attribute, IActionTransformer
     {
-        public object LockGuard { get; internal set; } = new object();
+        protected internal class ExclusionLockGuard
+        {
+            public bool IsLocked { get; set; } = false;
+        }
+
+        protected internal ExclusionLockGuard LockGuard { get; internal set; } = new ExclusionLockGuard();
 
         public Action TransformAction(string name, 
                                       Action action, 

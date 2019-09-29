@@ -18,13 +18,14 @@ namespace Ev3Dev.CSharp.EvA
             MethodsToGuard = new SortedSet<string>(methods);
         }
 
-        public LoopContents TransformLoop(LoopContents contents, object[] loopAttributes)
+        public ActionContents TransformLoop(ActionContents contents, object[] loopAttributes)
         {
             // Preconditions check.
             foreach (var attr in loopAttributes)
             {
                 var anotherMutex = attr as MutualExclusionAttribute;
-                if (anotherMutex == null)
+                // This requires GetCustomAttributes to be called only once.
+                if (anotherMutex == null || anotherMutex == this)
                     continue;
                 if (MethodsToGuard.Overlaps(anotherMutex.MethodsToGuard))
                     throw new ArgumentException("Every action may be used only in one mutual exclusion.");
@@ -37,7 +38,7 @@ namespace Ev3Dev.CSharp.EvA
             }
 
             // Change LockGuard of every listed AbstractSynchronizedTransformer to single synchronization point.
-            var exclusionGuard = new object();
+            var exclusionGuard = new AbstractSynchronizedTransformer.ExclusionLockGuard();
 
             var guardedActions = new Dictionary<string, (Action, object[])>();
             foreach (var entry in contents.Actions)
@@ -46,7 +47,7 @@ namespace Ev3Dev.CSharp.EvA
                 {
                     var synchronizer = FindSynchronizedTransformer(entry.Value.attributes);
                     if (synchronizer == null)
-                        throw new InvalidOperationException(Resources.NotNonReenterableMethod);
+                        throw new InvalidOperationException(string.Format(Resources.NotNonReenterableMethod, entry.Key));
                     synchronizer.LockGuard = exclusionGuard;
                 }
                 guardedActions[entry.Key] = entry.Value;
@@ -65,7 +66,7 @@ namespace Ev3Dev.CSharp.EvA
                 guardedAsyncs[entry.Key] = entry.Value;
             }
 
-            return new LoopContents(contents.Properties, guardedActions, guardedAsyncs);
+            return new ActionContents(contents.Properties, guardedActions, guardedAsyncs);
         }
 
 
