@@ -65,6 +65,7 @@
     <Compile Include="ExceptionTest.cs" />
     <Compile Include="MutualExclusionTest.cs" />
     <Compile Include="NonReenterableTest.cs" />
+    <Compile Include="PriorityTest.cs" />
     <Compile Include="SwitchTest.cs" />
   </ItemGroup>
   <ItemGroup>
