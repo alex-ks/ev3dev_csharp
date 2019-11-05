@@ -34,22 +34,32 @@ namespace Ev3Dev.CSharp.EvA
             foreach (var parameter in method.GetParameters())
             {
                 var sourceAttribute = parameter.GetCustomAttribute<FromSourceAttribute>();
+                string sourceName = null;
+
                 if (sourceAttribute == null)
-                    throw new InvalidOperationException(string.Format(Resources.NoParameterSource,
-                                                                      parameter.Name,
-                                                                      method.Name));
+                {
+                    sourceName = parameter.Name;
+                    sourceName = string.Concat(
+                            sourceName.Take(1)
+                                      .Select(char.ToUpper)
+                                      .Concat(sourceName.Skip(1)));
+                }
+                else
+                {
+                    sourceName = sourceAttribute.SourceName;
+                }
 
-                if (!properties.ContainsKey(sourceAttribute.SourceName))
+                if (!properties.ContainsKey(sourceName))
                     throw new InvalidOperationException(string.Format(Resources.SourceNotFound,
-                                                                      sourceAttribute.SourceName,
+                                                                      sourceName,
                                                                       parameter.Name,
                                                                       method.Name));
 
-                var sourceSuspects = properties[sourceAttribute.SourceName];
+                var sourceSuspects = properties[sourceName];
 
                 if (!sourceSuspects.ContainsKey(parameter.ParameterType))
                     throw new InvalidCastException(string.Format(Resources.SourceTypeMismatch,
-                                                                 sourceAttribute.SourceName,
+                                                                 sourceName,
                                                                  parameter.Name,
                                                                  method.Name));
 
