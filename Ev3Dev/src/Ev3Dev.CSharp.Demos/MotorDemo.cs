@@ -5,26 +5,26 @@ using Ev3Dev.CSharp.BasicDevices.Motors;
 
 namespace Ev3Dev.CSharp.Demos
 {
-	public class MotorDemo
-	{
-		public static void Main( )
-		{
-			Console.Out.WriteLine( "Connecting to motor..." );
-			using ( var motor = new LargeMotor( OutputPort.OutB ) )
-			{
-				Console.Out.WriteLine( "One rotation..." );
-				motor.Run( rotations: 1.0f, power: 75 ).Wait( );
+    public class MotorDemo
+    {
+        public static void Main()
+        {
+            Console.Out.WriteLine("Connecting to motor...");
+            using (var motor = new LargeMotor(OutputPort.OutB))
+            {
+                Console.Out.WriteLine("One rotation...");
+                motor.Run(rotations: 1.0f, speed: 90).Wait();
 
-				Console.Out.WriteLine( "One second run..." );
-				motor.RunTimed( ms: 1000, power: 75 ).Wait( );
+                Console.Out.WriteLine("One second run...");
+                motor.RunTimed(ms: 1000, speed: 90).Wait();
 
-				Console.Out.WriteLine( "1.5 seconds back..." );
-				motor.RunForever( power: -75 );
-				Thread.Sleep( 1500 );
-				motor.Stop( );
-			}
+                Console.Out.WriteLine("1.5 seconds back...");
+                motor.RunForever(speed: -90);
+                Thread.Sleep(1500);
+                motor.Stop();
+            }
 
-			Console.Out.WriteLine( "Finish" );
-		}
-	}
+            Console.Out.WriteLine("Finish");
+        }
+    }
 }

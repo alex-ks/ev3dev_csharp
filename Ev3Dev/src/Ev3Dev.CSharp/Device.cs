@@ -2,167 +2,205 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-using Ev3Dev.CSharp.Accessors;
 
 namespace Ev3Dev.CSharp
 {
-	public abstract class Device : IDisposable
+    public abstract class Device : IDisposable
     {
-        public static Func<IAttributeAccessor> PropertyAccessorProvider { get; set; } =
-            ( ) => new AttributeAccessor( );
-
         private string _path;
-	    private int _deviceIndex = -1;
-        private readonly IAttributeAccessor _accessor;
+        private int _deviceIndex = -1;
 
-	    protected Device( )
-	    {
-            _accessor = PropertyAccessorProvider( );
-	    }
+        private readonly Dictionary<string, StreamWriter> _writableAttributes;
 
-	    public bool Connected => !string.IsNullOrEmpty( _path );
-
-	    public int DeviceIndex
-	    {
-		    get
-		    {
-                if ( !Connected )
-                { throw new InvalidOperationException( "Device is not connected" ); }
-
-                if ( _deviceIndex < 0 )
-			    {
-				    int rank = 1;
-				    _deviceIndex = 0;
-				    foreach ( var c in _path.Where( char.IsDigit ) )
-				    {
-					    _deviceIndex += ( int )char.GetNumericValue( c ) * rank;
-					    rank *= 10;
-				    }
-			    }
-
-			    return _deviceIndex;
-		    }
-	    }
-
-	    protected string GetStringAttribute( string attributeName )
-	    {
-		    if ( !Connected )
-		    { throw new InvalidOperationException( "Device is not connected" ); }
-
-            return _accessor.GetStringAttribute( Path.Combine( _path, attributeName ) );
-	    }
-
-		protected string[] GetStringArrayAttribute( string attributeName )
-		{
-            if ( !Connected )
-            { throw new InvalidOperationException( "Device is not connected" ); }
-
-            return _accessor.GetStringArrayAttribute( Path.Combine( _path, attributeName ) );
-		}
-
-		protected string[] GetStringSelectorAttribute( string attributeName, out string selected )
-		{
-            if ( !Connected )
-            { throw new InvalidOperationException( "Device is not connected" ); }
-			
-			return _accessor.GetStringSelectorAttribute( Path.Combine( _path, attributeName ), 
-                                                         out selected );
-		}
-
-	    protected void SetStringAttribute( string attributeName, string value )
-	    {
-            if ( !Connected )
-            { throw new InvalidOperationException( "Device is not connected" ); }
-
-            _accessor.SetStringAttribute( Path.Combine( _path, attributeName ), value );
+        protected Device()
+        {
+            _writableAttributes = new Dictionary<string, StreamWriter>();
         }
 
-	    protected void SetIntAttribute( string attributeName, int value )
-	    {
-            if ( !Connected )
-            { throw new InvalidOperationException( "Device is not connected" ); }
+        public bool Connected => !string.IsNullOrEmpty(_path);
 
-            _accessor.SetIntAttribute( Path.Combine( _path, attributeName ), value );
+        public int DeviceIndex
+        {
+            get
+            {
+                if (!Connected)
+                    throw new InvalidOperationException("Device is not connected");
+
+                if (_deviceIndex < 0)
+                {
+                    int rank = 1;
+                    _deviceIndex = 0;
+                    foreach (var c in _path.Where(char.IsDigit))
+                    {
+                        _deviceIndex += (c - '0') * rank;
+                        rank *= 10;
+                    }
+                }
+
+                return _deviceIndex;
+            }
         }
 
-	    protected int GetIntAttribute( string attributeName )
-	    {
-            if ( !Connected )
-            { throw new InvalidOperationException( "Device is not connected" ); }
-
-            return _accessor.GetIntAttribute( Path.Combine( _path, attributeName ) );
+        protected int GetIntAttribute(string attributeName)
+        {
+            if (!Connected)
+                throw new InvalidOperationException("Device is not connected");
+            var attributePath = Path.Combine(_path, attributeName);
+            return int.Parse(GetStringAttribute(attributePath));
         }
 
-		protected int GetRawData( string attributeName, byte[] buffer, int offset, int count )
-		{
-			if ( !Connected )
-			{ throw new InvalidOperationException( "Device is not connected" ); }
+        protected string GetStringAttribute(string attributeName)
+        {
+            if (!Connected)
+                throw new InvalidOperationException("Device is not connected");
 
-            return _accessor.GetRawData( Path.Combine( _path, attributeName ), 
-                                         buffer,
-                                         offset,
-                                         count );
-		}
+            var attributePath = Path.Combine(_path, attributeName);
 
-		protected bool Connect( string classDirectory, 
-                                string pattern, 
-                                IDictionary<string, string[]> matchCriteria )
-	    {
-			if ( !Directory.Exists( classDirectory ) )
-			{ return false; }
+            using (var stream = new FileStream(attributePath,
+                                               FileMode.Open,
+                                               FileAccess.Read,
+                                               FileShare.ReadWrite))
+            {
+                using (var reader = new StreamReader(stream))
+                {
+                    return reader.ReadToEnd();
+                }
+            }
+        }
 
-		    var directories = Directory.EnumerateDirectories( classDirectory );
+        protected string[] GetStringArrayAttribute(string attributeName)
+        {
+            if (!Connected)
+                throw new InvalidOperationException("Device is not connected");
+            return GetStringAttribute(attributeName).Split();
+        }
 
-		    foreach ( var directory in directories )
-		    {
-			    var directoryName = Path.GetFileName( directory );
-			    if ( directoryName != null && directoryName.StartsWith( pattern ) )
-			    {
-				    bool match = true;
+        protected string[] GetStringSelectorAttribute(string attributeName, out string selected)
+        {
+            if (!Connected)
+                throw new InvalidOperationException("Device is not connected");
 
-				    foreach ( var matchCriterion in matchCriteria )
-				    {
-					    using ( var attributeStream = new FileStream( $@"{directory}/{matchCriterion.Key}",
-                                                                      FileMode.Open, 
-                                                                      FileAccess.Read ) )
-					    {
-						    using ( var reader = new StreamReader( attributeStream ) )
-						    {
-							    var value = reader.ReadLine( );
-							    if ( !matchCriterion.Value.Any( x => value != null && value.Equals( x ) ) )
-							    {
-								    match = false;
-								    break;
-							    }
-						    }
-					    }
-				    }
+            var variants = GetStringArrayAttribute(attributeName);
+            selected = null;
 
-				    if ( match )
-				    {
-					    _path = directory;
-					    return true;
-				    }
-			    }
-		    }
+            for (int i = 0; i < variants.Length; ++i)
+            {
+                if (variants[i].StartsWith("[") && variants[i].EndsWith("]"))
+                {
+                    selected = variants[i].Substring(1, variants[i].Length - 2);
+                    variants[i] = selected;
+                    break;
+                }
+            }
 
-		    return false;
-	    }
+            return variants;
+        }
 
-		/// <summary>
-		/// Closes all connections to device attributes. 
+        protected void SetStringAttribute(string attributeName, string value)
+        {
+            if (!Connected)
+                throw new InvalidOperationException("Device is not connected");
+
+            var attributePath = Path.Combine(_path, attributeName);
+
+            StreamWriter writer;
+            if (!_writableAttributes.ContainsKey(attributePath))
+            {
+                var stream = new FileStream(attributePath,
+                                            FileMode.Open,
+                                            FileAccess.Write,
+                                            FileShare.Read);
+                writer = new StreamWriter(stream);
+                _writableAttributes.Add(attributePath, writer);
+            }
+            else
+            {
+                writer = _writableAttributes[attributePath];
+            }
+            writer.Write(value);
+            writer.Flush();
+        }
+
+        protected void SetIntAttribute(string attributeName, int value)
+        {
+            if (!Connected)
+                throw new InvalidOperationException("Device is not connected");
+            SetStringAttribute(Path.Combine(_path, attributeName), value.ToString());
+        }
+
+        protected int GetRawData(string attributeName, byte[] buffer, int offset, int count)
+        {
+            if (!Connected)
+                throw new InvalidOperationException("Device is not connected");
+            using (var stream = new FileStream(Path.Combine(_path, attributeName), FileMode.Open, FileAccess.Read))
+            {
+                return stream.Read(buffer, offset, count);
+            }
+        }
+
+        protected bool Connect(string classDirectory,
+                               string pattern,
+                               IDictionary<string, string[]> matchCriteria)
+        {
+            if (!Directory.Exists(classDirectory))
+                return false;
+
+            var directories = Directory.EnumerateDirectories(classDirectory);
+
+            foreach (var directory in directories)
+            {
+                var directoryName = Path.GetFileName(directory);
+                if (directoryName != null && directoryName.StartsWith(pattern))
+                {
+                    bool match = true;
+
+                    foreach (var matchCriterion in matchCriteria)
+                    {
+                        using (var attributeStream = new FileStream($@"{directory}/{matchCriterion.Key}",
+                                                                    FileMode.Open,
+                                                                    FileAccess.Read))
+                        {
+                            using (var reader = new StreamReader(attributeStream))
+                            {
+                                var value = reader.ReadLine();
+                                if (!matchCriterion.Value.Any(x => value != null && value.Equals(x)))
+                                {
+                                    match = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (match)
+                    {
+                        _path = directory;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Closes all connections to device attributes.
         /// Next access to the attribute will open the connection again.
-		/// </summary>
-		public void ResetConnections( )
-		{
-            _accessor.ResetConnections( );
-		}
+        /// </summary>
+        public void ResetConnections()
+        {
+            foreach (var stream in _writableAttributes)
+            {
+                stream.Value.Dispose();
+            }
+            _writableAttributes.Clear();
+        }
 
-	    public virtual void Dispose( )
-	    {
-            _accessor.Dispose( );
-	    }
+        public virtual void Dispose()
+        {
+            ResetConnections();
+        }
 
-		public const string SysRoot = @"/sys/class";
+        public const string SysRoot = @"/sys/class";
     }
 }

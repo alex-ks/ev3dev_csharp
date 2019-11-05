@@ -15,7 +15,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net471</TargetFramework>
-    <StartupObject>Ev3Dev.CSharp.Demos.SoundDemo</StartupObject>
+    <StartupObject>Ev3Dev.CSharp.Demos.EvaDemo</StartupObject>
   </PropertyGroup>
 
 </Project>
