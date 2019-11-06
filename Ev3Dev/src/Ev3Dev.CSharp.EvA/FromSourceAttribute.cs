@@ -26,7 +26,7 @@ namespace Ev3Dev.CSharp.EvA
         internal static List<Func<object>> GetParametersSources(
             object target,
             MethodInfo method,
-            IReadOnlyDictionary<string, PropertyPack> properties)
+            IReadOnlyDictionary<string, PropertyWrapper> properties)
         {
             var parameterGetters = new List<Func<object>>();
             var type = target.GetType();
@@ -55,15 +55,15 @@ namespace Ev3Dev.CSharp.EvA
                                                                       parameter.Name,
                                                                       method.Name));
 
-                var sourceSuspects = properties[sourceName];
+                var sourceSuspect = properties[sourceName];
 
-                if (!sourceSuspects.ContainsKey(parameter.ParameterType))
+                if (sourceSuspect.Type != parameter.ParameterType)
                     throw new InvalidCastException(string.Format(Resources.SourceTypeMismatch,
                                                                  sourceName,
                                                                  parameter.Name,
                                                                  method.Name));
 
-                parameterGetters.Add(sourceSuspects[parameter.ParameterType]);
+                parameterGetters.Add(sourceSuspect.GenericGetter);
             }
 
             return parameterGetters;

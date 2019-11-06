@@ -49,9 +49,9 @@ namespace Ev3Dev.CSharp.EvA
         }
 
         public Action ExtractAction(
-            object target, 
-            MethodInfo method, 
-            IReadOnlyDictionary<string, PropertyPack> properties)
+            object target,
+            MethodInfo method,
+            IReadOnlyDictionary<string, PropertyWrapper> properties)
         {
             if (method.ReturnType != typeof(void))
                 throw new InvalidOperationException(string.Format(Resources.InvalidAction,
@@ -71,7 +71,7 @@ namespace Ev3Dev.CSharp.EvA
                 if (composedTrigger())
                 {
                     var argumentsArray = parameters.Select(getter => getter()).ToArray();
-                    callAction(argumentsArray);   
+                    callAction(argumentsArray);
                 }
             };
 
@@ -79,9 +79,9 @@ namespace Ev3Dev.CSharp.EvA
         }
 
         public Func<Task> ExtractAsyncAction(
-            object target, 
-            MethodInfo method, 
-            IReadOnlyDictionary<string, PropertyPack> properties)
+            object target,
+            MethodInfo method,
+            IReadOnlyDictionary<string, PropertyWrapper> properties)
         {
             if (method.ReturnType != typeof(Task))
                 throw new InvalidOperationException(string.Format(Resources.InvalidAsyncAction,
@@ -110,10 +110,10 @@ namespace Ev3Dev.CSharp.EvA
         }
 
         private Func<bool> ComposeTrigger(
-            string methodName, 
-            IReadOnlyDictionary<string, PropertyPack> properties)
+            string methodName,
+            IReadOnlyDictionary<string, PropertyWrapper> properties)
         {
-            var triggers = Triggers.Select(name => properties[name].Boolean).ToList();
+            var triggers = Triggers.Select(name => properties[name].BooleanGetter).ToList();
 
             Func<bool, bool, bool> compositionFunc;
             if (TriggerComposition == CompositionType.And)

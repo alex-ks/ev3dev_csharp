@@ -11,13 +11,28 @@ namespace Ev3Dev.CSharp.EvA
 {
     public static class LoopBuilder
     {
+        private class ValuesCache
+        {
+            public Dictionary<string, bool> BoolCache { get; } = new Dictionary<string, bool>();
+            public Dictionary<string, object> GenericCache { get; } = new Dictionary<string, object>();
+        }
+
+        /// <summary>
+        /// Creates an EventLoop from a model according to `EvA.AttributeContracts`.
+        /// </summary>
+        /// <param name="model">An object to be parsed.</param>
+        /// <param name="loadPropertiesLazily">
+        /// Specifies whether the properties should be cached actively at the beginning of a loop iteration,
+        /// or lazily on a first getter call. In any case, all the properties will be cached until the next iteration
+        /// to guarantee their persistance during a single iteration.
+        /// </param>
+        /// <param name="allowEndless">Specifies whether the loop can be built without any shutdown events.</param>
         public static EventLoop BuildLoop(
             this object model,
-            bool logExceptionsByDefault = true,
             bool loadPropertiesLazily = true,
             bool allowEndless = false)
         {
-            var valuesCache = new Dictionary<(string, Type), object>();
+            var valuesCache = new ValuesCache();
             var properties = ExtractProperties(model, valuesCache);
 
             // special case - shutdown events
@@ -33,33 +48,26 @@ namespace Ev3Dev.CSharp.EvA
                                     .OrderActions()
                                     .ToList();
 
-            var allGetters = properties.Select(pair => pair.Value.Select(innerPair => (pair.Key, innerPair)))
-                                       .Aggregate(Enumerable.Concat)
-                                       .Select(pair => new
-                                       {
-                                           name = pair.Key,
-                                           type = pair.innerPair.Key,
-                                           getter = pair.innerPair.Value
-                                       });
-
             Action fillCache = () =>
             {
-                foreach (var tuple in allGetters)
+                foreach (var pair in properties)
                 {
-                    if (tuple.type == typeof(bool))
-                    {
-                        var boolGetter = tuple.getter as Func<bool>;
-                        valuesCache[(tuple.name, tuple.type)] = boolGetter();
-                    }
+                    var name = pair.Key;
+                    var property = pair.Value;
+                    if (property.Type.TypeHandle == typeof(bool))
+                        valuesCache.BoolCache[name] = property.BooleanGetter();
                     else
-                    {
-                        var getter = tuple.getter as Func<object>;
-                        valuesCache[(tuple.name, tuple.type)] = getter();
-                    }
+                        valuesCache.GenericCache[name] = property.GenericGetter();
                 }
             };
 
-            var loop = new EventLoop(valuesCache, fillCache) { LoadPropertiesLazily = loadPropertiesLazily };
+            Action clearCache = () =>
+            {
+                valuesCache.BoolCache.Clear();
+                valuesCache.GenericCache.Clear();
+            };
+
+            var loop = new EventLoop(fillCache, clearCache) { LoadPropertiesLazily = loadPropertiesLazily };
 
             for (int i = 0; i < actions.Count; ++i)
                 loop.RegisterAction(actions[i], i);
@@ -70,92 +78,96 @@ namespace Ev3Dev.CSharp.EvA
             return loop;
         }
 
-        private static Dictionary<string, PropertyPack> ExtractProperties(
-            object model, 
-            Dictionary<(string, Type), object> valuesCache)
+        private static Dictionary<string, PropertyWrapper> ExtractProperties(
+            object model,
+            ValuesCache valuesCache)
         {
-            var getters = new Dictionary<string, PropertyPack>();
+            // All properties names must be unique.
+            var getters = new Dictionary<string, PropertyWrapper>();
 
             foreach (var prop in model.GetType().GetProperties())
             {
-                // expecting no same-named properties
-                var dict = new Dictionary<Type, Delegate>();
-
                 // plain getters
                 if (prop.PropertyType == typeof(bool))
-                    dict.AddCachingGetter(prop.PropertyType, 
-                                          DelegateGenerator.CreateGetter<bool>(model, prop), 
-                                          valuesCache, 
-                                          prop.Name);
+                    getters.Add(prop.Name, CreateCachingProperty(prop.PropertyType,
+                                                                 DelegateGenerator.CreateGetter<bool>(model, prop),
+                                                                 valuesCache,
+                                                                 prop.Name));
                 else
-                    dict.AddCachingGetter(prop.PropertyType,
-                                          DelegateGenerator.CreateGetter(model, prop),
-                                          valuesCache,
-                                          prop.Name);
+                    getters.Add(prop.Name, CreateCachingProperty(prop.PropertyType,
+                                                                 DelegateGenerator.CreateGetter(model, prop),
+                                                                 valuesCache,
+                                                                 prop.Name));
 
                 // custom getters
                 foreach (var extractor in prop.GetCustomAttributes(inherit: true)
                                               .Where(attr => attr is AbstractPropertyExtractor)
                                               .Select(attr => attr as AbstractPropertyExtractor))
                 {
-                    var (customGetter, t) = extractor.ExtractProperty(model, prop);
-                    dict.AddCachingGetter(t, customGetter, valuesCache, prop.Name);
+                    var (name, customGetter, t) = extractor.ExtractProperty(model, prop);
+                    if (getters.ContainsKey(name))
+                        throw new InvalidOperationException(
+                            string.Format("Name {0} of property generated by {1} is already used",
+                                          name,
+                                          extractor.GetType().Name));
+                    getters.Add(name, CreateCachingProperty(t,
+                                                                 customGetter,
+                                                                 valuesCache,
+                                                                 name));
                 }
-
-                getters.Add(prop.Name, new PropertyPack(dict));
             }
 
             return getters;
         }
 
-        private static void AddCachingGetter(this Dictionary<Type, Delegate> dict, 
-                                             Type type, 
-                                             Delegate delegateObj,
-                                             Dictionary<(string, Type), object> valuesCache,
-                                             string name)
+        private static PropertyWrapper CreateCachingProperty(
+            Type type,
+            Delegate delegateObj,
+            ValuesCache valuesCache,
+            string name)
         {
             if (type == typeof(bool))
             {
                 var boolGetter = delegateObj as Func<bool>;
                 Func<bool> cachedGetter = () =>
                 {
-                    if (valuesCache.TryGetValue((name, type), out object cached))
-                        return (bool)cached;
+                    if (valuesCache.BoolCache.TryGetValue(name, out bool cached))
+                        return cached;
                     var value = boolGetter();
-                    valuesCache.Add((name, type), value);
+                    valuesCache.BoolCache.Add(name, value);
                     return value;
                 };
-                dict.Add(type, cachedGetter);
+                return new PropertyWrapper(type, cachedGetter);
             }
             else
             {
                 var getter = delegateObj as Func<object>;
                 Func<object> cachedGetter = () =>
                 {
-                    if (valuesCache.TryGetValue((name, type), out object cached))
+                    if (valuesCache.GenericCache.TryGetValue(name, out object cached))
                         return cached;
                     var value = getter();
-                    valuesCache.Add((name, type), value);
+                    valuesCache.GenericCache.Add(name, value);
                     return value;
                 };
-                dict.Add(type, cachedGetter);
+                return new PropertyWrapper(type, cachedGetter);
             }
         }
 
         private static List<Func<bool>> ExtractShutdownEvents(object model,
-                                                              IReadOnlyDictionary<string, PropertyPack> properties)
+                                                              IReadOnlyDictionary<string, PropertyWrapper> properties)
         {
             var shutdownEvents = from prop in model.GetType().GetProperties()
                                  let attribute = prop.GetCustomAttribute<ShutdownEventAttribute>()
                                  where attribute != null
                                  select prop;
 
-            var shutdownEventsGetters = shutdownEvents.Select(prop => properties[prop.Name].Boolean).ToList();
+            var shutdownEventsGetters = shutdownEvents.Select(prop => properties[prop.Name].BooleanGetter).ToList();
 
             return shutdownEventsGetters;
         }
 
-        private static ActionContents ExtractContents(object model, IReadOnlyDictionary<string, PropertyPack> properties)
+        private static ActionContents ExtractContents(object model, IReadOnlyDictionary<string, PropertyWrapper> properties)
         {
             var actions = new Dictionary<string, (Action action, object[] attributes)>();
             var asyncActions = new Dictionary<string, (Func<Task> action, object[] attributes)>();
@@ -226,9 +238,9 @@ namespace Ev3Dev.CSharp.EvA
                 var transformed = pair.Value.action;
 
                 foreach (var transformer in transformers)
-                    transformed = transformer.TransformAction(pair.Key, 
-                                                              transformed, 
-                                                              pair.Value.attributes, 
+                    transformed = transformer.TransformAction(pair.Key,
+                                                              transformed,
+                                                              pair.Value.attributes,
                                                               contents.Properties);
 
                 transformedActions.Add(pair.Key, (transformed, pair.Value.attributes));
@@ -242,9 +254,9 @@ namespace Ev3Dev.CSharp.EvA
                 var transformed = pair.Value.action;
 
                 foreach (var transformer in transformers)
-                    transformed = transformer.TransformAsyncAction(pair.Key, 
-                                                                   transformed, 
-                                                                   pair.Value.attributes, 
+                    transformed = transformer.TransformAsyncAction(pair.Key,
+                                                                   transformed,
+                                                                   pair.Value.attributes,
                                                                    contents.Properties);
 
                 transformedAsyncs.Add(pair.Key, (transformed, pair.Value.attributes));

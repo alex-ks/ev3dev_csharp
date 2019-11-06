@@ -9,15 +9,15 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
     public interface IActionTransformer
     {
         Action TransformAction(
-            string name, 
-            Action action, 
+            string name,
+            Action action,
             object[] attributes,
-            IReadOnlyDictionary<string, PropertyPack> properties);
+            IReadOnlyDictionary<string, PropertyWrapper> properties);
 
         Func<Task> TransformAsyncAction(
             string name,
             Func<Task> action,
             object[] attributes,
-            IReadOnlyDictionary<string, PropertyPack> properties);
+            IReadOnlyDictionary<string, PropertyWrapper> properties);
     }
 }

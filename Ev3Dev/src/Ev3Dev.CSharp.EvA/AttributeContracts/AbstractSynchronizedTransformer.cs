@@ -20,20 +20,20 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
 
         protected internal ExclusionLockGuard LockGuard { get; internal set; } = new ExclusionLockGuard();
 
-        public Action TransformAction(string name, 
-                                      Action action, 
-                                      object[] attributes, 
-                                      IReadOnlyDictionary<string, PropertyPack> properties)
+        public Action TransformAction(string name,
+                                      Action action,
+                                      object[] attributes,
+                                      IReadOnlyDictionary<string, PropertyWrapper> properties)
         {
             if (attributes.Count(attr => attr is AbstractSynchronizedTransformer) > 1)
                 throw new ArgumentException("Method must have only one synchronization attribute");
             return TransformActionImpl(name, action, attributes, properties);
         }
 
-        public Func<Task> TransformAsyncAction(string name, 
-                                               Func<Task> action, 
-                                               object[] attributes, 
-                                               IReadOnlyDictionary<string, PropertyPack> properties)
+        public Func<Task> TransformAsyncAction(string name,
+                                               Func<Task> action,
+                                               object[] attributes,
+                                               IReadOnlyDictionary<string, PropertyWrapper> properties)
         {
             if (attributes.Count(attr => attr is AbstractSynchronizedTransformer) > 1)
                 throw new ArgumentException("Method must have only one synchronization attribute");
@@ -43,11 +43,11 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
         protected abstract Action TransformActionImpl(string name,
                                                       Action action,
                                                       object[] attributes,
-                                                      IReadOnlyDictionary<string, PropertyPack> properties);
+                                                      IReadOnlyDictionary<string, PropertyWrapper> properties);
 
         protected abstract Func<Task> TransformAsyncActionImpl(string name,
                                                                Func<Task> action,
                                                                object[] attributes,
-                                                               IReadOnlyDictionary<string, PropertyPack> properties);
+                                                               IReadOnlyDictionary<string, PropertyWrapper> properties);
     }
 }

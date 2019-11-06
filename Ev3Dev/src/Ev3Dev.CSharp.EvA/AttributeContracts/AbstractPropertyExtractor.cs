@@ -9,16 +9,16 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
 {
     public abstract class AbstractPropertyExtractor : Attribute
     {
-        public (Delegate, Type) ExtractProperty(object target, PropertyInfo property)
+        public (string, Delegate, Type) ExtractProperty(object target, PropertyInfo property)
         {
-            var (getter, type) = UnsafeExtractProperty(target, property);
+            var (name, getter, type) = UnsafeExtractProperty(target, property);
             if (type == typeof(bool) && !(getter is Func<bool>))
                 throw new InvalidOperationException("Boolean property getter must be Func<bool>"); // todo: add to resources
             if (type != typeof(bool) && !(getter is Func<object>))
                 throw new InvalidOperationException("Non-boolean property getter must be Func<object>"); // todo: add to resources
-            return (getter, type);
+            return (name, getter, type);
         }
 
-        protected abstract (Delegate, Type) UnsafeExtractProperty(object target, PropertyInfo property);
+        protected abstract (string, Delegate, Type) UnsafeExtractProperty(object target, PropertyInfo property);
     }
 }

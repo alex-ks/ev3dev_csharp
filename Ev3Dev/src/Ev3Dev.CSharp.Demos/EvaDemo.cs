@@ -25,40 +25,39 @@ namespace Ev3Dev.CSharp.Demos
         [ShutdownEvent]
         public bool Touched => _touchSensor.State == TouchSensorState.Pressed;
 
-        /* There is conversion from bool to int in order to avoid bool switch ambiguity.
-         * Switch is used here to activate handler only twice: when button is pressed and
+        /* Switch is used here to activate handler only twice: when button is pressed and
          * when button is released.
          * Otherwise, handler would be activated on each loop iteration while button is pressed.
          */
         [Switch]
-        public int ForwardRequired => _infraredSensor.RedDownPressed() ? 1 : 0;
+        public bool ForwardRequired => _infraredSensor.RedDownPressed();
         public bool NoBackward => _leftMotor.Speed <= 0;
 
         [Switch]
-        public int BackwardRequired => _infraredSensor.BlueDownPressed() ? 1 : 0;
+        public bool BackwardRequired => _infraredSensor.BlueDownPressed();
         public bool NoForward => _leftMotor.Speed >= 0;
 
         [Switch]
-        public int LeftTurnRequired => _infraredSensor.RedUpPressed() ? 1 : 0;
+        public bool LeftTurnRequired => _infraredSensor.RedUpPressed();
         public bool NoRightTurn => _steeringMotor.Speed <= 0;
 
         [Switch]
-        public int RightTurnRequired => _infraredSensor.BlueUpPressed() ? 1 : 0;
+        public bool RightTurnRequired => _infraredSensor.BlueUpPressed();
         public bool NoLeftTurn => _steeringMotor.Speed >= 0;
 
-        [EventHandler(nameof(ForwardRequired), nameof(NoBackward))]
-        public void DriveForward(int forwardRequired)
+        [EventHandler("ForwardRequiredChanged", nameof(NoBackward))]
+        public void DriveForward(bool forwardRequired)
         {
-            if (forwardRequired == 1)
+            if (forwardRequired)
                 Move(power: 75);
             else
                 Stop();
         }
 
-        [EventHandler(nameof(BackwardRequired), nameof(NoForward))]
-        public void DriveBackward(int backwardRequired)
+        [EventHandler("BackwardRequiredChanged", nameof(NoForward))]
+        public void DriveBackward(bool backwardRequired)
         {
-            if (backwardRequired == 1)
+            if (backwardRequired)
                 Move(power: -75);
             else
                 Stop();
@@ -74,19 +73,19 @@ namespace Ev3Dev.CSharp.Demos
          * Also, we should't discard repeated calls, because in this case the wheels won't
          * come back to their original position.
          */
-        [Cumulative, EventHandler(nameof(LeftTurnRequired), nameof(NoRightTurn))]
-        public async Task TurnLeft(int leftTurnRequired)
+        [Cumulative, EventHandler("LeftTurnRequiredChanged", nameof(NoRightTurn))]
+        public async Task TurnLeft(bool leftTurnRequired)
         {
-            if (leftTurnRequired == 1)
+            if (leftTurnRequired)
                 await _steeringMotor.Run(degrees: -45, speed: 100);
             else
                 await _steeringMotor.Run(degrees: 45, speed: 100);
         }
 
-        [Cumulative, EventHandler(nameof(RightTurnRequired), nameof(NoLeftTurn))]
-        public async Task TurnRight(int rightTurnRequired)
+        [Cumulative, EventHandler("RightTurnRequiredChanged", nameof(NoLeftTurn))]
+        public async Task TurnRight(bool rightTurnRequired)
         {
-            if (rightTurnRequired == 1)
+            if (rightTurnRequired)
                 await _steeringMotor.Run(degrees: 45, speed: 100);
             else
                 await _steeringMotor.Run(degrees: -45, speed: 100);

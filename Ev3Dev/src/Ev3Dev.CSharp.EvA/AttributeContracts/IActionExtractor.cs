@@ -10,13 +10,13 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
     public interface IActionExtractor
     {
         Action ExtractAction(
-            object target, 
-            MethodInfo method, 
-            IReadOnlyDictionary<string, PropertyPack> properties);
+            object target,
+            MethodInfo method,
+            IReadOnlyDictionary<string, PropertyWrapper> properties);
 
         Func<Task> ExtractAsyncAction(
             object target,
             MethodInfo method,
-            IReadOnlyDictionary<string, PropertyPack> properties);
+            IReadOnlyDictionary<string, PropertyWrapper> properties);
     }
 }

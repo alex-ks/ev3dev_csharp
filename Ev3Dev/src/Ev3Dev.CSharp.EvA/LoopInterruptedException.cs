@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace Ev3Dev.CSharp.EvA
 {
+    /// <summary>
+    /// Signalizes that loop execution should be stopped immediately.
+    /// </summary>
     public class LoopInterruptedException : AggregateException
     {
         // todo: add message to resources

@@ -10,17 +10,17 @@ namespace Ev3Dev.CSharp.EvA
 {
     // It's guaranteered that properties won't be called simultaneously, so there is no need to make them reenterable.
     /// <summary>
-    /// Declares that method is not reenterable. All method calls performed while another call being executed 
-    /// will be discarded. 
+    /// Declares that method is not reenterable. All method calls performed while another call being executed
+    /// will be discarded.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public class DiscardableAttribute : AbstractSynchronizedTransformer
     {
         protected sealed override Action TransformActionImpl(
-            string name, 
-            Action action, 
-            object[] attributes, 
-            IReadOnlyDictionary<string, PropertyPack> properties)
+            string name,
+            Action action,
+            object[] attributes,
+            IReadOnlyDictionary<string, PropertyWrapper> properties)
         {
             return () =>
             {
@@ -32,10 +32,10 @@ namespace Ev3Dev.CSharp.EvA
         }
 
         protected sealed override Func<Task> TransformAsyncActionImpl(
-            string name, 
-            Func<Task> action, 
-            object[] attributes, 
-            IReadOnlyDictionary<string, PropertyPack> properties)
+            string name,
+            Func<Task> action,
+            object[] attributes,
+            IReadOnlyDictionary<string, PropertyWrapper> properties)
         {
             return async () =>
             {

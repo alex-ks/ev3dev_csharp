@@ -10,11 +10,11 @@ namespace Ev3Dev.CSharp.EvA
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     /// <summary>
-    /// Declares that method is not reenterable. If the method is called while another call is being executed, 
+    /// Declares that method is not reenterable. If the method is called while another call is being executed,
     /// it will be pushed to a separate task to be launched after the previous call end. The loop will not await
     /// for the execution end.
     /// When using property forwarding, the properties will be took from the current iteration scope. In other words,
-    /// the properties will be taken from scope where the previous call has been finished and the current call has 
+    /// the properties will be taken from scope where the previous call has been finished and the current call has
     /// been started.
     /// </summary>
     public class CumulativeAttribute : AbstractSynchronizedTransformer
@@ -23,7 +23,7 @@ namespace Ev3Dev.CSharp.EvA
             string name,
             Action action,
             object[] attributes,
-            IReadOnlyDictionary<string, PropertyPack> properties)
+            IReadOnlyDictionary<string, PropertyWrapper> properties)
         {
             return () => { lock (LockGuard) { action(); } };
         }
@@ -32,7 +32,7 @@ namespace Ev3Dev.CSharp.EvA
             string name,
             Func<Task> action,
             object[] attributes,
-            IReadOnlyDictionary<string, PropertyPack> properties)
+            IReadOnlyDictionary<string, PropertyWrapper> properties)
         {
             return async () =>
             {
@@ -60,7 +60,7 @@ namespace Ev3Dev.CSharp.EvA
                             LockGuard.IsLocked = true;
                         }
                     });
-                } 
+                }
                 else
                 {
                     LockGuard.IsLocked = true;

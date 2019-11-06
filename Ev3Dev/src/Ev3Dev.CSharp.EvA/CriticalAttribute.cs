@@ -16,10 +16,10 @@ namespace Ev3Dev.CSharp.EvA
         public bool LogExceptions { get; set; } = true;
 
         public Action TransformAction(
-            string name, 
-            Action action, 
-            object[] attributes, 
-            IReadOnlyDictionary<string, PropertyPack> properties)
+            string name,
+            Action action,
+            object[] attributes,
+            IReadOnlyDictionary<string, PropertyWrapper> properties)
         {
             // todo: add message to resources
             if (attributes.FirstOrDefault(attr => attr is NonCriticalAttribute) != null)
@@ -42,10 +42,10 @@ namespace Ev3Dev.CSharp.EvA
         }
 
         public Func<Task> TransformAsyncAction(
-            string name, 
-            Func<Task> action, 
-            object[] attributes, 
-            IReadOnlyDictionary<string, PropertyPack> properties)
+            string name,
+            Func<Task> action,
+            object[] attributes,
+            IReadOnlyDictionary<string, PropertyWrapper> properties)
         {
             // todo: add message to resources
             if (attributes.FirstOrDefault(attr => attr is NonCriticalAttribute) != null)

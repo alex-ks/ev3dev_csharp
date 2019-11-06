@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace Ev3Dev.CSharp.EvA
 {
     /// <summary>
-    /// Represents application message loop (similar to Win32Api), 
+    /// Represents application message loop (similar to Win32Api),
     /// which will poll events and perform actions on each iteration
     /// </summary>
     public class EventLoop
@@ -19,17 +19,16 @@ namespace Ev3Dev.CSharp.EvA
             public int Compare((Action, int) x, (Action, int) y) => x.Item2.CompareTo(y.Item2);
         }
 
-        private SortedSet<(Action action, int priority)> _actions = 
+        private SortedSet<(Action action, int priority)> _actions =
             new SortedSet<(Action action, int priority)>(new ActionsPrioritizer());
 
         private List<Func<bool>> _shutdownEvents = new List<Func<bool>>();
 
         // All the properties are accessed from the loop thread, so there is no need to
         // mainain a concurrent cache.
-        private Dictionary<(string, Type), object> _valuesCache = 
-            new Dictionary<(string, Type), object>();
 
         private Action _populateCache;
+        private Action _clearCache;
         private bool _shouldPopulateCache = false;
 
         /// <summary>
@@ -37,10 +36,10 @@ namespace Ev3Dev.CSharp.EvA
         /// </summary>
         /// <param name="valuesCache"></param>
         /// <param name="populateCache"></param>
-        internal EventLoop(Dictionary<(string, Type), object> valuesCache, Action populateCache)
+        internal EventLoop(Action populateCache, Action clearCache)
         {
-            _valuesCache = valuesCache;
             _populateCache = populateCache ?? throw new ArgumentException("Populate cache function must not be null");
+            _clearCache = clearCache ?? throw new ArgumentException("Clear cache function must not be null");
         }
 
         public bool LoadPropertiesLazily
@@ -53,7 +52,7 @@ namespace Ev3Dev.CSharp.EvA
         /// Registers event trigger and its handler.
         /// </summary>
         /// <param name="trigger">
-        /// Will be called on each iteration. If trigger returns true, 
+        /// Will be called on each iteration. If trigger returns true,
         /// event loop will call the handler.
         /// </param>
         /// <param name="handler">Will be called if trigger returns true.</param>
@@ -132,7 +131,7 @@ namespace Ev3Dev.CSharp.EvA
                 if (millisecondsCooldown != 0)
                     Thread.Sleep(millisecondsCooldown);
 
-                _valuesCache.Clear();
+                _clearCache();
             }
         }
 
