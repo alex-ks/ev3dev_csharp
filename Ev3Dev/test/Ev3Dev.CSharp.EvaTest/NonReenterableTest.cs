@@ -65,7 +65,7 @@ namespace Ev3Dev.EvATest
             var model = new CumulativeNonReenterableModel();
             var loop = model.BuildLoop();
             loop.Start();
-            await Task.Delay(TimeSpan.FromSeconds(0.4));
+            await Task.Delay(TimeSpan.FromSeconds(0.25));
             Assert.Equal(1, model.AsyncCounter);
             await Task.Delay(TimeSpan.FromSeconds(0.5));
             Assert.Equal(2, model.AsyncCounter);

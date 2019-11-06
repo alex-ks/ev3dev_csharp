@@ -96,7 +96,7 @@ namespace Ev3Dev.EvATest
             Assert.Equal(3, model.Counter);
         }
 
-        class SourceNotSpecifiedModel
+        class CapitalizedAsDefaultSourceModel
         {
             public int Counter { get; set; } = 0;
 
@@ -112,9 +112,33 @@ namespace Ev3Dev.EvATest
         }
 
         [Fact]
+        public void CapitalizedUsedAsDefaultSource()
+        {
+            var model = new CapitalizedAsDefaultSourceModel();
+            var loop = model.BuildLoop();
+            loop.Start();
+            Assert.Equal(3, model.Counter);
+        }
+
+        class SourceUnknownModel
+        {
+            public int Counter { get; set; } = 0;
+
+            [ShutdownEvent]
+            public bool Finished => Counter == 3;
+
+            [Action]
+            public void Do(int someCounter)
+            {
+                Assert.Equal(Counter, someCounter);
+                ++Counter;
+            }
+        }
+
+        [Fact]
         public void NoSourceNotSupported()
         {
-            var model = new SourceNotSpecifiedModel();
+            var model = new SourceUnknownModel();
             Assert.Throws<InvalidOperationException>(() => model.BuildLoop());
         }
 
