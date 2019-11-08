@@ -160,9 +160,21 @@ namespace Ev3Dev.CSharp.EvA
             var shutdownEvents = from prop in model.GetType().GetProperties()
                                  let attribute = prop.GetCustomAttribute<ShutdownEventAttribute>()
                                  where attribute != null
-                                 select prop;
+                                 select prop.Name;
 
-            var shutdownEventsGetters = shutdownEvents.Select(prop => properties[prop.Name].BooleanGetter).ToList();
+            var customShutdownEvents = from attr in model.GetType().GetCustomAttributes<CustomShutdownEventAttribute>()
+                                       select attr.Name;
+
+            foreach (var customProp in customShutdownEvents)
+            {
+                if (!properties.ContainsKey(customProp))
+                    throw new InvalidOperationException(  // todo: add to resources.
+                            "CustomShutdownEvent is declared with unexisting property as argument.");
+            }
+
+            var shutdownEventsGetters = shutdownEvents.Concat(customShutdownEvents)
+                                                      .Select(prop => properties[prop].BooleanGetter)
+                                                      .ToList();
 
             return shutdownEventsGetters;
         }
@@ -217,7 +229,7 @@ namespace Ev3Dev.CSharp.EvA
                 else
                 {
                     throw new InvalidOperationException(string.Format(Resources.InvalidAsyncAction,
-                                                                        method.Name));
+                                                                      method.Name));
                 }
                 names.Add(method.Name);
             }
