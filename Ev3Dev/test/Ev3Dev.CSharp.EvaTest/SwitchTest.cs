@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Ev3Dev.EvATest
+namespace Ev3Dev.CSharp.EvATest
 {
     public class SwitchTest
     {
