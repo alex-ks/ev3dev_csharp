@@ -1,4 +1,5 @@
 ﻿using Ev3Dev.CSharp.EvA.AttributeContracts;
+using Ev3Dev.CSharp.EvA.Reflection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,28 +28,38 @@ namespace Ev3Dev.CSharp.EvA
     {
         public const string NameSuffix = "Changed";
 
+        private static Func<bool> CreateSwitchGetter<T>(object target, PropertyInfo property)
+        {
+            var getter = DelegateGenerator.CreateGetter<T>(target, property);
+            T cache = default(T);
+            bool started = true;
+            var comparer = EqualityComparer<T>.Default;
+
+            return () =>
+            {
+                var value = getter();
+                if (started)
+                {
+                    cache = value;
+                    started = false;
+                    return false;
+                }
+                var result = !comparer.Equals(value, cache);
+                cache = value;
+                return result;
+            };
+        }
+
         protected override (string, Delegate, Type) UnsafeExtractProperty(object target, PropertyInfo property)
         {
             if (property.GetCustomAttribute<SwitchAttribute>() == null)
                 throw new ArgumentException("No switch attribute on property"); // todo: add message to resources
 
-            var getter = DelegateGenerator.CreateGetter(target, property);
-            object cache = null;
-            bool started = true;
+            var getter = typeof(SwitchAttribute).GetMethod(nameof(CreateSwitchGetter),
+                                                           BindingFlags.Static | BindingFlags.NonPublic)
+                                                .MakeGenericMethod(property.PropertyType);
 
-            Func<bool> switchGetter = () =>
-            {
-                var obj = getter();
-                if (started)
-                {
-                    cache = obj;
-                    started = false;
-                    return false;
-                }
-                var result = !Equals(obj, cache);
-                cache = obj;
-                return result;
-            };
+            var switchGetter = getter.Invoke(this, new[] { target, property }) as Func<bool>;
 
             return (property.Name + NameSuffix, switchGetter, typeof(bool));
         }

@@ -1,4 +1,5 @@
 ﻿using Ev3Dev.CSharp.EvA.AttributeContracts;
+using Ev3Dev.CSharp.EvA.Reflection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,16 +24,17 @@ namespace Ev3Dev.CSharp.EvA
             SourceName = sourceName;
         }
 
-        internal static List<Func<object>> GetParametersSources(
+        public static Delegate[] GetParametersSources(
             object target,
             MethodInfo method,
-            IReadOnlyDictionary<string, PropertyWrapper> properties)
+            IReadOnlyDictionary<string, ICachingDelegate> properties)
         {
-            var parameterGetters = new List<Func<object>>();
-            var type = target.GetType();
+            var parameters = method.GetParameters();
+            var parameterGetters = new Delegate[parameters.Length];
 
-            foreach (var parameter in method.GetParameters())
+            for (int i = 0; i < parameters.Length; ++i)
             {
+                var parameter = parameters[i];
                 var sourceAttribute = parameter.GetCustomAttribute<FromSourceAttribute>();
                 string sourceName = null;
 
@@ -57,13 +59,13 @@ namespace Ev3Dev.CSharp.EvA
 
                 var sourceSuspect = properties[sourceName];
 
-                if (sourceSuspect.Type != parameter.ParameterType)
+                if (sourceSuspect.Delegate.Method.ReturnType != parameter.ParameterType)
                     throw new InvalidCastException(string.Format(Resources.SourceTypeMismatch,
                                                                  sourceName,
                                                                  parameter.Name,
                                                                  method.Name));
 
-                parameterGetters.Add(sourceSuspect.GenericGetter);
+                parameterGetters[i] = sourceSuspect.Delegate;
             }
 
             return parameterGetters;

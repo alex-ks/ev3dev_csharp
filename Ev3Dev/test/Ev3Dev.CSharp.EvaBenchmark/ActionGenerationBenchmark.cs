@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Ev3Dev.CSharp.EvA;
-using Ev3Dev.CSharp.EvA.AttributeContracts;
+using Ev3Dev.CSharp.EvA.Reflection;
 using BenchmarkDotNet.Attributes;
 
 namespace Ev3Dev.CSharp.EvaBenchmark
@@ -30,7 +30,7 @@ namespace Ev3Dev.CSharp.EvaBenchmark
 
         public void SixArgMethod(int arg1, char arg2, double arg3, bool arg4, string arg5, decimal arg6) { }
 
-        private Dictionary<string, PropertyWrapper> _properties;
+        private Dictionary<string, ICachingDelegate> _properties;
 
         private Action _zeroArgAction;
         private Action _oneArgAction;
@@ -42,21 +42,21 @@ namespace Ev3Dev.CSharp.EvaBenchmark
 
         public ActionGenerationBenchmark()
         {
-            Func<object> arg1Getter = () => Arg1;
-            Func<object> arg2Getter = () => Arg2;
-            Func<object> arg3Getter = () => Arg3;
+            Func<int> arg1Getter = () => Arg1;
+            Func<char> arg2Getter = () => Arg2;
+            Func<double> arg3Getter = () => Arg3;
             Func<bool> arg4Getter = () => Arg4;
-            Func<object> arg5Getter = () => Arg5;
-            Func<object> arg6Getter = () => Arg6;
+            Func<string> arg5Getter = () => Arg5;
+            Func<decimal> arg6Getter = () => Arg6;
 
-            _properties = new Dictionary<string, PropertyWrapper>()
+            _properties = new Dictionary<string, ICachingDelegate>()
             {
-                { nameof(Arg1), new PropertyWrapper(Arg1.GetType(), arg1Getter) },
-                { nameof(Arg2), new PropertyWrapper(Arg2.GetType(), arg2Getter) },
-                { nameof(Arg3), new PropertyWrapper(Arg3.GetType(), arg3Getter) },
-                { nameof(Arg4), new PropertyWrapper(Arg4.GetType(), arg4Getter) },
-                { nameof(Arg5), new PropertyWrapper(Arg5.GetType(), arg5Getter) },
-                { nameof(Arg6), new PropertyWrapper(Arg6.GetType(), arg6Getter) }
+                { nameof(Arg1), new CachingFunction<int>(arg1Getter) },
+                { nameof(Arg2), new CachingFunction<char>(arg2Getter) },
+                { nameof(Arg3), new CachingFunction<double>(arg3Getter) },
+                { nameof(Arg4), new CachingFunction<bool>(arg4Getter) },
+                { nameof(Arg5), new CachingFunction<string>(arg5Getter) },
+                { nameof(Arg6), new CachingFunction<decimal>(arg6Getter) }
             };
 
             _zeroArgAction = GenerateAction(nameof(ZeroArgMethod));

@@ -1,4 +1,5 @@
 ﻿using Ev3Dev.CSharp.EvA.AttributeContracts;
+using Ev3Dev.CSharp.EvA.Reflection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,45 +20,25 @@ namespace Ev3Dev.CSharp.EvA
         public Action ExtractAction(
             object target,
             MethodInfo method,
-            IReadOnlyDictionary<string, PropertyWrapper> properties)
+            IReadOnlyDictionary<string, ICachingDelegate> properties)
         {
             if (method.ReturnType != typeof(void))
                 throw new InvalidOperationException(string.Format(Resources.InvalidAction,
                                                                   method.Name));
-
             var parameters = FromSourceAttribute.GetParametersSources(target, method, properties);
-
-            Action<object[]> callAction = DelegateGenerator.GenerateAction(target, method);
-
-            Action performAction = () =>
-            {
-                var argumentsArray = parameters.Select(getter => getter()).ToArray();
-                callAction(argumentsArray);
-            };
-
-            return performAction;
+            return DelegateGenerator.GenerateAction(target, method, parameters);
         }
 
         public Func<Task> ExtractAsyncAction(
             object target,
             MethodInfo method,
-            IReadOnlyDictionary<string, PropertyWrapper> properties)
+            IReadOnlyDictionary<string, ICachingDelegate> properties)
         {
             if (method.ReturnType != typeof(Task))
                 throw new InvalidOperationException(string.Format(Resources.InvalidAsyncAction,
                                                                   method.Name));
-
             var parameters = FromSourceAttribute.GetParametersSources(target, method, properties);
-
-            Func<object[], Task> callAction = DelegateGenerator.GenerateAsyncAction(target, method);
-
-            Func<Task> performAction = () =>
-            {
-                var argumentsArray = parameters.Select(getter => getter()).ToArray();
-                return callAction(argumentsArray);
-            };
-
-            return performAction;
+            return DelegateGenerator.GenerateAsyncAction(target, method, parameters);
         }
     }
 }

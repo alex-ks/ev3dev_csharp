@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Ev3Dev.CSharp.EvA;
-using Ev3Dev.CSharp.EvA.AttributeContracts;
+using Ev3Dev.CSharp.EvA.Reflection;
 using Xunit;
 
 namespace Ev3Dev.CSharp.EvaTest
@@ -67,39 +67,39 @@ namespace Ev3Dev.CSharp.EvaTest
         {
             get
             {
-                Func<object> arg1Getter = () => Arg1;
-                Func<object> arg2Getter = () => Arg2;
-                Func<object> arg3Getter = () => Arg3;
+                Func<int> arg1Getter = () => Arg1;
+                Func<char> arg2Getter = () => Arg2;
+                Func<double> arg3Getter = () => Arg3;
                 Func<bool> arg4Getter = () => Arg4;
-                Func<object> arg5Getter = () => Arg5;
-                Func<object> arg6Getter = () => Arg6;
+                Func<string> arg5Getter = () => Arg5;
+                Func<decimal> arg6Getter = () => Arg6;
 
-                var properties = new Dictionary<string, PropertyWrapper>();
+                var properties = new Dictionary<string, ICachingDelegate>();
                 yield return new object[] { properties, nameof(ZeroArgAction) };
 
-                properties.Add(nameof(Arg1), new PropertyWrapper(Arg1.GetType(), arg1Getter));
+                properties.Add(nameof(Arg1), new CachingFunction<int>(arg1Getter));
                 yield return new object[] { properties, nameof(OneArgAction) };
 
-                properties.Add(nameof(Arg2), new PropertyWrapper(Arg2.GetType(), arg2Getter));
+                properties.Add(nameof(Arg2), new CachingFunction<char>(arg2Getter));
                 yield return new object[] { properties, nameof(TwoArgAction) };
 
-                properties.Add(nameof(Arg3), new PropertyWrapper(Arg3.GetType(), arg3Getter));
+                properties.Add(nameof(Arg3), new CachingFunction<double>(arg3Getter));
                 yield return new object[] { properties, nameof(ThreeArgAction) };
 
-                properties.Add(nameof(Arg4), new PropertyWrapper(Arg4.GetType(), arg4Getter));
+                properties.Add(nameof(Arg4), new CachingFunction<bool>(arg4Getter));
                 yield return new object[] { properties, nameof(FourArgAction) };
 
-                properties.Add(nameof(Arg5), new PropertyWrapper(Arg5.GetType(), arg5Getter));
+                properties.Add(nameof(Arg5), new CachingFunction<string>(arg5Getter));
                 yield return new object[] { properties, nameof(FiveArgAction) };
 
-                properties.Add(nameof(Arg6), new PropertyWrapper(Arg6.GetType(), arg6Getter));
+                properties.Add(nameof(Arg6), new CachingFunction<decimal>(arg6Getter));
                 yield return new object[] { properties, nameof(SixArgAction) };
             }
         }
 
         [Theory]
         [MemberData(nameof(Data))]
-        public void TestAll(Dictionary<string, PropertyWrapper> properties, string methodName)
+        public void TestAll(Dictionary<string, ICachingDelegate> properties, string methodName)
         {
             var method = this.GetType().GetMethod(methodName,
                                                   BindingFlags.NonPublic | BindingFlags.Instance);

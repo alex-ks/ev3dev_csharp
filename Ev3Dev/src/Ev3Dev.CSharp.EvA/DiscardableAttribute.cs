@@ -1,4 +1,5 @@
 ﻿using Ev3Dev.CSharp.EvA.AttributeContracts;
+using Ev3Dev.CSharp.EvA.Reflection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +21,7 @@ namespace Ev3Dev.CSharp.EvA
             string name,
             Action action,
             object[] attributes,
-            IReadOnlyDictionary<string, PropertyWrapper> properties)
+            IReadOnlyDictionary<string, ICachingDelegate> properties)
         {
             return () =>
             {
@@ -35,7 +36,7 @@ namespace Ev3Dev.CSharp.EvA
             string name,
             Func<Task> action,
             object[] attributes,
-            IReadOnlyDictionary<string, PropertyWrapper> properties)
+            IReadOnlyDictionary<string, ICachingDelegate> properties)
         {
             return async () =>
             {
