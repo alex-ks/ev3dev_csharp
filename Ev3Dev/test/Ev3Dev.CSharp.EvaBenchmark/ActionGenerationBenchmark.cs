@@ -79,6 +79,27 @@ namespace Ev3Dev.CSharp.EvaBenchmark
         }
 
         [Benchmark]
+        public void RegularZeroArgCall() => ZeroArgMethod();
+
+        [Benchmark]
+        public void RegularOneArgCall() => OneArgMethod(Arg1);
+
+        [Benchmark]
+        public void RegularTwoArgCall() => TwoArgMethod(Arg1, Arg2);
+
+        [Benchmark]
+        public void RegularThreeArgCall() => ThreeArgMethod(Arg1, Arg2, Arg3);
+
+        [Benchmark]
+        public void RegularFourArgCall() => FourArgMethod(Arg1, Arg2, Arg3, Arg4);
+
+        [Benchmark]
+        public void RegularFiveArgCall() => FiveArgMethod(Arg1, Arg2, Arg3, Arg4, Arg5);
+
+        [Benchmark]
+        public void RegularSixArgCall() => SixArgMethod(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
+
+        [Benchmark]
         public void ZeroArgAction() => _zeroArgAction();
 
         [Benchmark]
