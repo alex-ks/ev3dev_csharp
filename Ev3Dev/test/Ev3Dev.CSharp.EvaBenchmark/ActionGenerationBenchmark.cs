@@ -9,6 +9,18 @@ namespace Ev3Dev.CSharp.EvaBenchmark
 {
     public class ActionGenerationBenchmark
     {
+        class DirectFunction : ICachingDelegate
+        {
+            public Delegate Delegate { get; set; }
+            public void PopulateCache() { }
+            public void ClearCache() { }
+
+            public DirectFunction(Delegate d)
+            {
+                Delegate = d;
+            }
+        }
+
         private int Arg1 => 1;
         private char Arg2 => '2';
         private double Arg3 => 3.0;
@@ -51,12 +63,12 @@ namespace Ev3Dev.CSharp.EvaBenchmark
 
             _properties = new Dictionary<string, ICachingDelegate>()
             {
-                { nameof(Arg1), new CachingFunction<int>(arg1Getter) },
-                { nameof(Arg2), new CachingFunction<char>(arg2Getter) },
-                { nameof(Arg3), new CachingFunction<double>(arg3Getter) },
-                { nameof(Arg4), new CachingFunction<bool>(arg4Getter) },
-                { nameof(Arg5), new CachingFunction<string>(arg5Getter) },
-                { nameof(Arg6), new CachingFunction<decimal>(arg6Getter) }
+                { nameof(Arg1), new DirectFunction(arg1Getter) },
+                { nameof(Arg2), new DirectFunction(arg2Getter) },
+                { nameof(Arg3), new DirectFunction(arg3Getter) },
+                { nameof(Arg4), new DirectFunction(arg4Getter) },
+                { nameof(Arg5), new DirectFunction(arg5Getter) },
+                { nameof(Arg6), new DirectFunction(arg6Getter) }
             };
 
             _zeroArgAction = GenerateAction(nameof(ZeroArgMethod));
