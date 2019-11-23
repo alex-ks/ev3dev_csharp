@@ -1,17 +1,52 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <ItemGroup>
-    <ProjectReference Include="..\Ev3Dev.CSharp\Ev3Dev.CSharp.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies"
-                      Version="1.0.0-preview.2"
-                      PrivateAssets="All" />
-  </ItemGroup>
-
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <TargetFramework>net471</TargetFramework>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{102FCEA0-2502-4952-9A43-A3DCE7E9E63C}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Ev3Dev.CSharp.BasicDevices</RootNamespace>
+    <AssemblyName>Ev3Dev.CSharp.BasicDevices</AssemblyName>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
   </PropertyGroup>
-
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <ConsolePause>false</ConsolePause>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <ConsolePause>false</ConsolePause>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Ports.cs" />
+    <Compile Include="Sensors\TouchSensor.cs" />
+    <Compile Include="Sensors\ColorSensor.cs" />
+    <Compile Include="Sensors\GyroSensor.cs" />
+    <Compile Include="Sensors\InfraredRemoteDecoder.cs" />
+    <Compile Include="Sensors\InfraredSensor.cs" />
+    <Compile Include="Sensors\UltrasonicSensor.cs" />
+    <Compile Include="Motors\LegoMotor.cs" />
+    <Compile Include="Motors\LargeMotor.cs" />
+    <Compile Include="Motors\MediumMotor.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ev3Dev.CSharp\Ev3Dev.CSharp.csproj">
+      <Project>{05013453-D31B-4878-815B-F16E7A869E98}</Project>
+      <Name>Ev3Dev.CSharp</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

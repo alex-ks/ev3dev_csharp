@@ -1,29 +1,69 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\..\packages\xunit.core.2.4.1\build\xunit.core.props" Condition="Exists('..\..\packages\xunit.core.2.4.1\build\xunit.core.props')" />
   <PropertyGroup>
-    <TargetFramework>net471</TargetFramework>
-
-    <IsPackable>false</IsPackable>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">anycpu</Platform>
+    <ProjectGuid>{02E4FE0B-FAC8-426A-8271-4FDBBF58E2A1}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Ev3Dev.CSharp.EvaTest</RootNamespace>
+    <AssemblyName>Ev3Dev.CSharp.EvaTest</AssemblyName>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
   </PropertyGroup>
-
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|anycpu' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <IntermediateOutputPath>obj\anycpu\Debug</IntermediateOutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|anycpu' ">
+    <DebugSymbols>false</DebugSymbols>
+    <DebugType></DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <IntermediateOutputPath>obj\anycpu\Release</IntermediateOutputPath>
+  </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.3.0" />
-    <PackageReference Include="xunit" Version="2.4.1" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1" />
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies"
-                      Version="1.0.0-preview.2"
-                      PrivateAssets="All" />
+    <Compile Include="ActionGenerationTest.cs" />
+    <Compile Include="ActionsTest.cs" />
+    <Compile Include="CustomShutdownEventTest.cs" />
+    <Compile Include="EventHandlerTest.cs" />
+    <Compile Include="ExceptionTest.cs" />
+    <Compile Include="MutualExclusionTest.cs" />
+    <Compile Include="NonReenterableTest.cs" />
+    <Compile Include="PriorityTest.cs" />
+    <Compile Include="SwitchTest.cs" />
   </ItemGroup>
-
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Ev3Dev.CSharp.EvA\Ev3Dev.CSharp.EvA.csproj" />
+    <None Include="xunit.runner.json" />
+    <None Include="packages.config" />
   </ItemGroup>
-
-  <!-- Mono has AppDomain bugs that prevent test running, so disable them. -->
   <ItemGroup>
-    <Content Include="xunit.runner.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <Reference Include="xunit.abstractions">
+      <HintPath>..\..\packages\xunit.abstractions.2.0.3\lib\net35\xunit.abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.assert">
+      <HintPath>..\..\packages\xunit.assert.2.4.1\lib\netstandard1.1\xunit.assert.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.core">
+      <HintPath>..\..\packages\xunit.extensibility.core.2.4.1\lib\net452\xunit.core.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.execution.desktop">
+      <HintPath>..\..\packages\xunit.extensibility.execution.2.4.1\lib\net452\xunit.execution.desktop.dll</HintPath>
+    </Reference>
   </ItemGroup>
-
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Ev3Dev.CSharp.EvA\Ev3Dev.CSharp.EvA.csproj">
+      <Project>{A1E8774F-81C8-4F06-A708-CD139B462679}</Project>
+      <Name>Ev3Dev.CSharp.EvA</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="..\..\packages\xunit.core.2.4.1\build\xunit.core.targets" Condition="Exists('..\..\packages\xunit.core.2.4.1\build\xunit.core.targets')" />
 </Project>

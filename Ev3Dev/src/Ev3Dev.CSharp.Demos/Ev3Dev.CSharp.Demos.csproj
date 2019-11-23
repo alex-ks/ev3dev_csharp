@@ -1,21 +1,61 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <ItemGroup>
-    <ProjectReference Include="..\Ev3Dev.CSharp\Ev3Dev.CSharp.csproj" />
-    <ProjectReference Include="..\Ev3Dev.CSharp.BasicDevices\Ev3Dev.CSharp.BasicDevices.csproj" />
-    <ProjectReference Include="..\Ev3Dev.CSharp.EvA\Ev3Dev.CSharp.EvA.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies"
-                      Version="1.0.0-preview.2"
-                      PrivateAssets="All" />
-  </ItemGroup>
-
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">anycpu</Platform>
+    <ProjectGuid>{B6B06A9B-1BFD-49CD-BC6E-5115B7C852E4}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net471</TargetFramework>
-    <StartupObject>Ev3Dev.CSharp.Demos.EvaDemo</StartupObject>
+    <RootNamespace>Ev3Dev.CSharp.Demos</RootNamespace>
+    <AssemblyName>Ev3Dev.CSharp.Demos</AssemblyName>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
+    <StartupObject>Ev3Dev.CSharp.Demos.MotorDemo</StartupObject>
   </PropertyGroup>
-
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|anycpu' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <ExternalConsole>true</ExternalConsole>
+    <IntermediateOutputPath>obj\anycpu\Debug</IntermediateOutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|anycpu' ">
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <ExternalConsole>true</ExternalConsole>
+    <IntermediateOutputPath>obj\anycpu\Release</IntermediateOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ColorSensorDemo.cs" />
+    <Compile Include="EvaDemo.cs" />
+    <Compile Include="GyroSensorDemo.cs" />
+    <Compile Include="InfraredSensorDemo.cs" />
+    <Compile Include="MotorDemo.cs" />
+    <Compile Include="SoundDemo.cs" />
+    <Compile Include="TouchSensorDemo.cs" />
+    <Compile Include="UltrasonicSensorDemo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ev3Dev.CSharp\Ev3Dev.CSharp.csproj">
+      <Project>{05013453-D31B-4878-815B-F16E7A869E98}</Project>
+      <Name>Ev3Dev.CSharp</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ev3Dev.CSharp.BasicDevices\Ev3Dev.CSharp.BasicDevices.csproj">
+      <Project>{102FCEA0-2502-4952-9A43-A3DCE7E9E63C}</Project>
+      <Name>Ev3Dev.CSharp.BasicDevices</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ev3Dev.CSharp.EvA\Ev3Dev.CSharp.EvA.csproj">
+      <Project>{A1E8774F-81C8-4F06-A708-CD139B462679}</Project>
+      <Name>Ev3Dev.CSharp.EvA</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>
