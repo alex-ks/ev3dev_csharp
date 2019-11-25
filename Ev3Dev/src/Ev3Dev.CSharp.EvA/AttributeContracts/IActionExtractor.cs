@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Ev3Dev.CSharp.EvA.Reflection;
 
 namespace Ev3Dev.CSharp.EvA.AttributeContracts
 {
@@ -12,11 +13,11 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
         Action ExtractAction(
             object target,
             MethodInfo method,
-            IReadOnlyDictionary<string, PropertyWrapper> properties);
+            IReadOnlyDictionary<string, ICachingDelegate> properties);
 
         Func<Task> ExtractAsyncAction(
             object target,
             MethodInfo method,
-            IReadOnlyDictionary<string, PropertyWrapper> properties);
+            IReadOnlyDictionary<string, ICachingDelegate> properties);
     }
 }

@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Ev3Dev.CSharp.EvA.AttributeContracts;
+using Ev3Dev.CSharp.EvA.Reflection;
 
 namespace Ev3Dev.CSharp.EvA
 {
@@ -51,7 +52,7 @@ namespace Ev3Dev.CSharp.EvA
         public Action ExtractAction(
             object target,
             MethodInfo method,
-            IReadOnlyDictionary<string, PropertyWrapper> properties)
+            IReadOnlyDictionary<string, ICachingDelegate> properties)
         {
             if (method.ReturnType != typeof(void))
                 throw new InvalidOperationException(string.Format(Resources.InvalidAction,
@@ -64,15 +65,12 @@ namespace Ev3Dev.CSharp.EvA
             var parameters = FromSourceAttribute.GetParametersSources(target, method, properties);
             var composedTrigger = ComposeTrigger(method.Name, properties);
 
-            Action<object[]> callAction = DelegateGenerator.GenerateAction(target, method);
+            Action callAction = DelegateGenerator.GenerateAction(target, method, parameters);
 
             Action performAction = () =>
             {
                 if (composedTrigger())
-                {
-                    var argumentsArray = parameters.Select(getter => getter()).ToArray();
-                    callAction(argumentsArray);
-                }
+                    callAction();
             };
 
             return performAction;
@@ -81,7 +79,7 @@ namespace Ev3Dev.CSharp.EvA
         public Func<Task> ExtractAsyncAction(
             object target,
             MethodInfo method,
-            IReadOnlyDictionary<string, PropertyWrapper> properties)
+            IReadOnlyDictionary<string, ICachingDelegate> properties)
         {
             if (method.ReturnType != typeof(Task))
                 throw new InvalidOperationException(string.Format(Resources.InvalidAsyncAction,
@@ -94,15 +92,12 @@ namespace Ev3Dev.CSharp.EvA
             var parameters = FromSourceAttribute.GetParametersSources(target, method, properties);
             var composedTrigger = ComposeTrigger(method.Name, properties);
 
-            Func<object[], Task> callAction = DelegateGenerator.GenerateAsyncAction(target, method);
+            Func<Task> callAction = DelegateGenerator.GenerateAsyncAction(target, method, parameters);
 
             Func<Task> performAction = () =>
             {
                 if (composedTrigger())
-                {
-                    var argumentsArray = parameters.Select(getter => getter()).ToArray();
-                    return callAction(argumentsArray);
-                }
+                    return callAction();
                 return Task.CompletedTask;
             };
 
@@ -111,9 +106,11 @@ namespace Ev3Dev.CSharp.EvA
 
         private Func<bool> ComposeTrigger(
             string methodName,
-            IReadOnlyDictionary<string, PropertyWrapper> properties)
+            IReadOnlyDictionary<string, ICachingDelegate> properties)
         {
-            var triggers = Triggers.Select(name => properties[name].BooleanGetter).ToList();
+            var triggers = Triggers.Select(name => properties[name].Delegate as Func<bool>).ToList();
+            if (triggers.Any(t => t == null))
+                throw new InvalidOperationException("Some triggers are not boolean getters.");
 
             Func<bool, bool, bool> compositionFunc;
             if (TriggerComposition == CompositionType.And)
@@ -122,7 +119,7 @@ namespace Ev3Dev.CSharp.EvA
                 compositionFunc = (a, b) => a || b;
             else
                 throw new InvalidOperationException(string.Format(Resources.UnknownTriggerComposition,
-                                                                    methodName));
+                                                                  methodName));
 
             return () => triggers.Select(t => t()).Aggregate(compositionFunc);
         }

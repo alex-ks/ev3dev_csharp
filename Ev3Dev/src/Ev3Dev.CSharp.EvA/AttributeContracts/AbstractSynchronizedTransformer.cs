@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Ev3Dev.CSharp.EvA.Reflection;
 
 namespace Ev3Dev.CSharp.EvA.AttributeContracts
 {
@@ -23,7 +24,7 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
         public Action TransformAction(string name,
                                       Action action,
                                       object[] attributes,
-                                      IReadOnlyDictionary<string, PropertyWrapper> properties)
+                                      IReadOnlyDictionary<string, ICachingDelegate> properties)
         {
             if (attributes.Count(attr => attr is AbstractSynchronizedTransformer) > 1)
                 throw new ArgumentException("Method must have only one synchronization attribute");
@@ -33,7 +34,7 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
         public Func<Task> TransformAsyncAction(string name,
                                                Func<Task> action,
                                                object[] attributes,
-                                               IReadOnlyDictionary<string, PropertyWrapper> properties)
+                                               IReadOnlyDictionary<string, ICachingDelegate> properties)
         {
             if (attributes.Count(attr => attr is AbstractSynchronizedTransformer) > 1)
                 throw new ArgumentException("Method must have only one synchronization attribute");
@@ -43,11 +44,11 @@ namespace Ev3Dev.CSharp.EvA.AttributeContracts
         protected abstract Action TransformActionImpl(string name,
                                                       Action action,
                                                       object[] attributes,
-                                                      IReadOnlyDictionary<string, PropertyWrapper> properties);
+                                                      IReadOnlyDictionary<string, ICachingDelegate> properties);
 
         protected abstract Func<Task> TransformAsyncActionImpl(string name,
                                                                Func<Task> action,
                                                                object[] attributes,
-                                                               IReadOnlyDictionary<string, PropertyWrapper> properties);
+                                                               IReadOnlyDictionary<string, ICachingDelegate> properties);
     }
 }
